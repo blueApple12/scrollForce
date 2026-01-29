@@ -3,28 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Locked Magic</title>
+    <title>Magician Scroll</title>
     <style>
         body { 
             margin: 0; background: #000; font-family: sans-serif; 
-            overflow: hidden; /* Disable native scroll completely */
-            height: 100vh; touch-action: none;
+            overflow: hidden; /* We control physics manually */
+            height: 100vh; touch-action: none; user-select: none;
         }
         #stage {
             position: fixed; width: 100%; top: 0; left: 0;
-            will-change: transform; /* optimizing performance */
+            will-change: transform;
         }
         .box { 
             width: 100%; height: 200px; 
             display: flex; justify-content: center; align-items: center; 
-            color: #666; font-size: 1.5rem; font-weight: bold;
+            color: #555; font-size: 1.5rem; font-weight: bold;
             border-bottom: 2px solid #111; background: #0a0a0a;
         }
         #target { 
-            background: #ff0000 !important; 
+            background: #D32F2F !important; 
             color: white !important; 
-            box-shadow: 0 0 50px rgba(255,0,0,0.2);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
             z-index: 10;
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
     </style>
 </head>
@@ -35,138 +38,140 @@
     <script>
         const stage = document.getElementById('stage');
         
-        // Physics Variables
+        // --- CONFIGURATION ---
+        const BOX_COUNT = 40;
+        const TARGET_INDEX = 25; // Which box is RED
+        
+        // --- STATE VARIABLES ---
         let currentY = 0;
         let velocity = 0;
         let isDragging = false;
-        let lastY = 0;
+        let lastTouchY = 0;
         let animationFrame;
-
-        // Magic Variables
-        let isLocked = false;
-        let hasFlung = false;
+        
+        // Magic States
+        let isArmed = false; // True AFTER you finish holding
         let holdTimer;
-        let magicModeActive = false;
 
-        // 1. Build the List
-        for (let i = 1; i <= 40; i++) {
+        // 1. GENERATE CONTENT
+        for (let i = 1; i <= BOX_COUNT; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === 20) { 
-                box.id = 'target'; 
-                box.innerText = "RED TARGET"; 
-            } else { 
-                box.innerText = "Item " + i; 
+            if (i === TARGET_INDEX) {
+                box.id = 'target';
+                box.innerText = "RED";
+            } else {
+                box.innerText = i;
             }
             stage.appendChild(box);
         }
 
-        // 2. The Main Physics Loop
-        function loop() {
-            if (!isDragging && !magicModeActive) {
-                // Apply Inertia (Friction)
+        // 2. MAIN PHYSICS LOOP
+        function update() {
+            if (!isDragging) {
+                // Standard Inertia
                 currentY += velocity;
-                velocity *= 0.95; // Friction factor
-
-                // Stop tiny movements
+                velocity *= 0.96; // Friction (0.96 is smooth like iOS)
+                
+                // Stop micro-movements
                 if (Math.abs(velocity) < 0.1) velocity = 0;
                 
-                updatePosition();
+                // Bounds (Optional: bounces at top/bottom)
+                const maxScroll = -((BOX_COUNT * 200) - window.innerHeight);
+                if (currentY > 0) { currentY *= 0.8; velocity = 0; } // Top bounce
+                if (currentY < maxScroll) { currentY += (maxScroll - currentY) * 0.2; velocity = 0; } // Bottom bounce
+                
+                render();
             }
-            animationFrame = requestAnimationFrame(loop);
+            animationFrame = requestAnimationFrame(update);
         }
-        loop(); // Start loop
-
-        function updatePosition() {
+        
+        function render() {
             stage.style.transform = `translateY(${currentY}px)`;
         }
+        
+        // Start the physics engine
+        update();
 
-        // 3. Touch Events
+        // 3. TOUCH HANDLERS
         window.addEventListener('touchstart', (e) => {
             isDragging = true;
-            velocity = 0; // Kill momentum on touch
-            lastY = e.touches[0].clientY;
-            hasFlung = false;
-
-            // Start the Magic Hold Timer
-            holdTimer = setTimeout(() => {
-                isLocked = true; // FREEZE THE SCROLL
-                if (navigator.vibrate) navigator.vibrate(50); // Signal to you
-            }, 800); // 0.8 seconds to lock
+            velocity = 0; // Stop any moving scroll
+            lastTouchY = e.touches[0].clientY;
+            
+            // --- ARMING LOGIC ---
+            // Only try to arm if we aren't already armed
+            if (!isArmed) {
+                holdTimer = setTimeout(() => {
+                    isArmed = true;
+                    // Haptic Feedback to let you know it's ready
+                    if (navigator.vibrate) navigator.vibrate([30, 50, 30]); 
+                    console.log("TRICK ARMED: Release finger and scroll again to trigger.");
+                }, 1000); // Hold for 1 second to arm
+            }
         });
 
         window.addEventListener('touchmove', (e) => {
+            // If they move their finger, cancel the arming timer
+            clearTimeout(holdTimer);
+            
             const clientY = e.touches[0].clientY;
-            const delta = clientY - lastY;
-            lastY = clientY;
-
-            // DETECT FLING ATTEMPT
-            if (Math.abs(delta) > 2) hasFlung = true;
-
-            // IF LOCKED: DO NOT MOVE THE SCREEN
-            if (isLocked) {
-                return; 
-            }
-
-            // Normal Scroll
-            clearTimeout(holdTimer); // If they move before 0.8s, cancel lock
+            const delta = clientY - lastTouchY;
+            lastTouchY = clientY;
+            
+            // 1:1 Movement (Feels real)
             currentY += delta;
-            velocity = delta; // Save speed for inertia
-            updatePosition();
+            velocity = delta; // Capture speed for throw
+            render();
         });
 
         window.addEventListener('touchend', () => {
             isDragging = false;
-            clearTimeout(holdTimer);
+            clearTimeout(holdTimer); // Cancel timer if they let go too fast
 
-            // THE MAGIC TRIGGER
-            if (isLocked && hasFlung) {
-                // Determine they held, then tried to fling, then let go
-                isLocked = false; 
-                magicModeActive = true; // Take over physics loop
-                scrollToRed();
-            } else {
-                // If they just tapped or held without flinging, reset lock
-                isLocked = false; 
+            // --- THE MAGIC TRIGGER ---
+            if (isArmed) {
+                // They just finished the scroll AFTER the arming phase.
+                // Hijack the physics engine!
+                cancelAnimationFrame(animationFrame); // Stop normal physics
+                forceToRed();
+                isArmed = false; // Reset the trick
             }
         });
 
-        // 4. The Magic Animation
-        function scrollToRed() {
+        // 4. THE FORCE ANIMATION
+        function forceToRed() {
             const target = document.getElementById('target');
-            // Calculate exact center position
-            // We want the target's center to match the screen's center
-            // currentY is negative (scrolling down moves content up)
+            // Calculate where the list needs to be to center the Red Box
+            // Formula: - (BoxTopPosition - ScreenCenter + BoxCenter)
+            const targetY = -(target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2));
             
-            // Formula: - (BoxOffset - ScreenHalf + BoxHalf)
-            const targetPos = - (target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2));
+            const startY = currentY;
+            const distance = targetY - startY;
             
-            const startPos = currentY;
-            const distance = targetPos - startPos;
+            const duration = 1000; // 1 second glide
             const startTime = performance.now();
-            const duration = 800; // 0.8 seconds to arrive
 
-            function animate(time) {
+            function animateForce(time) {
                 const elapsed = time - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
-                // Easing function (Ease Out Quart) - starts fast, stops gentle
-                const ease = 1 - Math.pow(1 - progress, 4);
+                // Ease Out Quint (Starts fast like a flick, slows gently)
+                const ease = 1 - Math.pow(1 - progress, 5);
                 
-                currentY = startPos + (distance * ease);
-                updatePosition();
+                currentY = startY + (distance * ease);
+                render();
 
                 if (progress < 1) {
-                    requestAnimationFrame(animate);
+                    requestAnimationFrame(animateForce);
                 } else {
-                    // FINISHED
-                    magicModeActive = false; 
-                    velocity = 0; // Ensure it stays dead still
+                    // Animation Done. Restart normal physics engine for next time.
+                    velocity = 0;
+                    update(); 
                 }
             }
-            requestAnimationFrame(animate);
+            requestAnimationFrame(animateForce);
         }
-
     </script>
 </body>
 </html>
