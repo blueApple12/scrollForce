@@ -3,33 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Web Force Wrapper</title>
+    <title>Web Force</title>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
+        body, html { 
+            margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; 
+            /* Disables the magnifying glass and copy/paste popups */
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+        }
         
-        /* The container that actually scrolls */
         #scroll-container {
-            width: 100%;
-            height: 100%;
-            overflow-y: scroll;
-            -webkit-overflow-scrolling: touch;
-            scroll-behavior: auto;
+            width: 100%; height: 100%;
+            overflow-y: scroll; -webkit-overflow-scrolling: touch;
         }
 
         #site-wrapper {
-            width: 100%;
-            height: 5000px; /* Adjust this to the estimated length of the site */
-            border: none;
-            display: block;
+            width: 100%; height: 10000px; /* High height to ensure it fills the scroll */
+            border: none; display: block;
         }
 
-        /* The invisible layer that only appears when we want to 'Force' */
+        /* This layer captures the 2 magic swipes */
         #magic-overlay {
-            position: fixed;
-            top: 0; left: 0;
+            position: fixed; top: 0; left: 0;
             width: 100%; height: 100%;
-            z-index: 10;
-            display: none; /* Only active during the trick */
+            z-index: 1000; display: none;
+            background: rgba(0,0,0,0); /* Invisible but present */
         }
     </style>
 </head>
@@ -50,43 +47,47 @@
         let swipeCount = 0;
         let isArmed = false;
 
-        // 1. ARMING LOGIC (Long Press)
-        // We listen on the container. If you hold still, we arm.
+        // Disable long-press context menus site-wide
+        window.oncontextmenu = function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+        };
+
+        // 1. ARMING LOGIC
         container.addEventListener('touchstart', (e) => {
             if (isArmed) return;
 
             holdTimer = setTimeout(() => {
                 forcedY = container.scrollTop;
                 isArmed = true;
-                if (navigator.vibrate) navigator.vibrate([50, 50]);
+                if (navigator.vibrate) navigator.vibrate([60, 40]);
                 
-                // Show overlay to intercept the 'Magic Swipes'
+                // Activate overlay to hijack the next two flings
                 overlay.style.display = 'block';
-            }, 1200); 
-        });
+            }, 1000); 
+        }, {passive: false});
 
-        container.addEventListener('touchmove', () => {
-            clearTimeout(holdTimer);
-        });
+        container.addEventListener('touchmove', () => clearTimeout(holdTimer));
+        container.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        container.addEventListener('touchend', () => {
-            clearTimeout(holdTimer);
-        });
+        // 2. THE OVERLAY (Handles the 2-swipe count)
+        let startY, initialScroll;
 
-        // 2. THE FORCE LOGIC (On the Overlay)
         overlay.addEventListener('touchstart', (e) => {
-            this.startY = e.touches[0].clientY;
-            this.initialScroll = container.scrollTop;
+            startY = e.touches[0].clientY;
+            initialScroll = container.scrollTop;
         });
 
         overlay.addEventListener('touchmove', (e) => {
-            const delta = this.startY - e.touches[0].clientY;
-            container.scrollTop = this.initialScroll + delta;
+            const delta = startY - e.touches[0].clientY;
+            container.scrollTop = initialScroll + delta;
         });
 
         overlay.addEventListener('touchend', () => {
             swipeCount++;
             
+            // Only trigger on the release of the SECOND swipe
             if (swipeCount >= 2 && forcedY !== null) {
                 executeMagicScroll(forcedY);
             }
@@ -95,7 +96,7 @@
         function executeMagicScroll(target) {
             const start = container.scrollTop;
             const change = target - start;
-            const duration = 1500;
+            const duration = 1600;
             let startTime = null;
 
             function animate(currentTime) {
@@ -103,7 +104,7 @@
                 const timeElapsed = currentTime - startTime;
                 const progress = Math.min(timeElapsed / duration, 1);
                 
-                // Quintic Out Easing
+                // Smooth glide easing
                 const ease = 1 - Math.pow(1 - progress, 5);
                 
                 container.scrollTop = start + change * ease;
@@ -111,10 +112,11 @@
                 if (timeElapsed < duration) {
                     requestAnimationFrame(animate);
                 } else {
-                    // RESET TRICK
+                    // RESET EVERYTHING
                     isArmed = false;
                     swipeCount = 0;
-                    overlay.style.display = 'none'; // Give control back to the website
+                    forcedY = null;
+                    overlay.style.display = 'none';
                 }
             }
             requestAnimationFrame(animate);
