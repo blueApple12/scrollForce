@@ -19,7 +19,6 @@
         .setup-zone { margin-bottom: 40px; }
         label { display: block; font-size: 0.65rem; text-transform: uppercase; color: #444; margin-bottom: 15px; letter-spacing: 2px; }
         
-        /* The number input - no default '4' unless you put it there */
         input { 
             background: transparent; border: none; border-bottom: 2px solid #333; 
             color: var(--accent); font-size: 3.5rem; text-align: center; width: 120px; 
@@ -56,18 +55,17 @@
         const inputField = document.getElementById('swipeLimit');
         const confirmMsg = document.getElementById('confirm');
 
-        // MEMORY LOAD: Strictly loads whatever you last used
         const memory = localStorage.getItem('sf-custom-limit');
         if (memory) {
             inputField.value = memory;
         }
 
         function engage() {
-            const val = inputField.value || 4; // Failsafe to 4 if you leave it empty
+            const val = inputField.value || 4;
             localStorage.setItem('sf-custom-limit', val);
             
-            // THE PAYLOAD: Uses the live 'val' from your input
-            const payload = `javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>{tC=0},300);if(tC>=2){location.reload();return;}fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.remove();loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=${val}&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none'}}requestAnimationFrame(anim)}})();`;
+            /* UPDATED PAYLOAD: Features auto-reset logic */
+            const payload = `javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);function arm(){t.style.display='block';if(!t.parentNode)document.body.appendChild(t);}t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>{tC=0},300);if(tC>=2){location.reload();return;}fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.style.display='none';loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=${val}&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none';arm();}}requestAnimationFrame(anim)}})();`;
 
             navigator.clipboard.writeText(payload).then(() => {
                 confirmMsg.style.opacity = "1";
