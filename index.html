@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magician Scroll</title>
+    <title>Color Picker</title>
     <style>
         body { 
             margin: 0; background: #000; font-family: sans-serif; 
-            overflow: hidden; /* We control physics manually */
-            height: 100vh; touch-action: none; user-select: none;
+            overflow: hidden; height: 100vh; touch-action: none;
         }
         #stage {
             position: fixed; width: 100%; top: 0; left: 0;
@@ -17,17 +16,8 @@
         .box { 
             width: 100%; height: 200px; 
             display: flex; justify-content: center; align-items: center; 
-            color: #555; font-size: 1.5rem; font-weight: bold;
-            border-bottom: 2px solid #111; background: #0a0a0a;
-        }
-        #target { 
-            background: #D32F2F !important; 
-            color: white !important; 
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
-            z-index: 10;
-            font-size: 2rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            color: rgba(255,255,255,0.2); font-size: 1.2rem; font-weight: bold;
+            border-bottom: 1px solid rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -37,49 +27,38 @@
 
     <script>
         const stage = document.getElementById('stage');
+        const BOX_COUNT = 50;
+        const FORCED_INDEX = 25; // This is your secret target
         
-        // --- CONFIGURATION ---
-        const BOX_COUNT = 40;
-        const TARGET_INDEX = 25; // Which box is RED
-        
-        // --- STATE VARIABLES ---
-        let currentY = 0;
+        let currentY = -2000; // Start in the middle
         let velocity = 0;
         let isDragging = false;
         let lastTouchY = 0;
         let animationFrame;
         
-        // Magic States
-        let isArmed = false; // True AFTER you finish holding
+        // Trick Logic
+        let isArmed = false; 
         let holdTimer;
 
-        // 1. GENERATE CONTENT
+        // 1. Generate Random Colors
         for (let i = 1; i <= BOX_COUNT; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === TARGET_INDEX) {
-                box.id = 'target';
-                box.innerText = "RED";
-            } else {
-                box.innerText = i;
-            }
+            box.style.background = `hsl(${Math.random() * 360}, 60%, 45%)`;
+            if (i === FORCED_INDEX) box.id = "secret-target";
+            box.innerText = "Color " + i;
             stage.appendChild(box);
         }
 
-        // 2. MAIN PHYSICS LOOP
         function update() {
             if (!isDragging) {
-                // Standard Inertia
                 currentY += velocity;
-                velocity *= 0.96; // Friction (0.96 is smooth like iOS)
+                velocity *= 0.95;
                 
-                // Stop micro-movements
-                if (Math.abs(velocity) < 0.1) velocity = 0;
-                
-                // Bounds (Optional: bounces at top/bottom)
+                // Boundaries
                 const maxScroll = -((BOX_COUNT * 200) - window.innerHeight);
-                if (currentY > 0) { currentY *= 0.8; velocity = 0; } // Top bounce
-                if (currentY < maxScroll) { currentY += (maxScroll - currentY) * 0.2; velocity = 0; } // Bottom bounce
+                if (currentY > 0) { currentY *= 0.8; velocity = 0; }
+                if (currentY < maxScroll) { currentY = maxScroll; velocity = 0; }
                 
                 render();
             }
@@ -89,88 +68,69 @@
         function render() {
             stage.style.transform = `translateY(${currentY}px)`;
         }
-        
-        // Start the physics engine
         update();
 
-        // 3. TOUCH HANDLERS
         window.addEventListener('touchstart', (e) => {
             isDragging = true;
-            velocity = 0; // Stop any moving scroll
+            velocity = 0;
             lastTouchY = e.touches[0].clientY;
             
-            // --- ARMING LOGIC ---
-            // Only try to arm if we aren't already armed
-            if (!isArmed) {
-                holdTimer = setTimeout(() => {
-                    isArmed = true;
-                    // Haptic Feedback to let you know it's ready
-                    if (navigator.vibrate) navigator.vibrate([30, 50, 30]); 
-                    console.log("TRICK ARMED: Release finger and scroll again to trigger.");
-                }, 1000); // Hold for 1 second to arm
-            }
+            // ARMING: Only works if finger is STILL. 
+            // If they move, the timer clears.
+            holdTimer = setTimeout(() => {
+                isArmed = true;
+                if (navigator.vibrate) navigator.vibrate(60); 
+            }, 1000);
         });
 
         window.addEventListener('touchmove', (e) => {
-            // If they move their finger, cancel the arming timer
-            clearTimeout(holdTimer);
-            
+            clearTimeout(holdTimer); // Movement cancels arming
             const clientY = e.touches[0].clientY;
             const delta = clientY - lastTouchY;
             lastTouchY = clientY;
             
-            // 1:1 Movement (Feels real)
             currentY += delta;
-            velocity = delta; // Capture speed for throw
+            velocity = delta; 
             render();
         });
 
         window.addEventListener('touchend', () => {
             isDragging = false;
-            clearTimeout(holdTimer); // Cancel timer if they let go too fast
+            clearTimeout(holdTimer);
 
-            // --- THE MAGIC TRIGGER ---
-            if (isArmed) {
-                // They just finished the scroll AFTER the arming phase.
-                // Hijack the physics engine!
-                cancelAnimationFrame(animationFrame); // Stop normal physics
-                forceToRed();
-                isArmed = false; // Reset the trick
+            // THE TRIGGER: 
+            // If you armed it previously, the very next release triggers the force.
+            if (isArmed && Math.abs(velocity) > 2) {
+                isArmed = false; // Reset trick
+                cancelAnimationFrame(animationFrame);
+                forceToTarget();
             }
         });
 
-        // 4. THE FORCE ANIMATION
-        function forceToRed() {
-            const target = document.getElementById('target');
-            // Calculate where the list needs to be to center the Red Box
-            // Formula: - (BoxTopPosition - ScreenCenter + BoxCenter)
-            const targetY = -(target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2));
-            
+        function forceToTarget() {
+            const target = document.getElementById('secret-target');
+            const targetY = -(target.offsetTop - (window.innerHeight / 2) + 100);
             const startY = currentY;
             const distance = targetY - startY;
-            
-            const duration = 1000; // 1 second glide
+            const duration = 1200; 
             const startTime = performance.now();
 
-            function animateForce(time) {
+            function animate(time) {
                 const elapsed = time - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                
-                // Ease Out Quint (Starts fast like a flick, slows gently)
-                const ease = 1 - Math.pow(1 - progress, 5);
+                const ease = 1 - Math.pow(1 - progress, 5); // Smooth decelerate
                 
                 currentY = startY + (distance * ease);
                 render();
 
                 if (progress < 1) {
-                    requestAnimationFrame(animateForce);
+                    requestAnimationFrame(animate);
                 } else {
-                    // Animation Done. Restart normal physics engine for next time.
                     velocity = 0;
                     update(); 
                 }
             }
-            requestAnimationFrame(animateForce);
+            requestAnimationFrame(animate);
         }
     </script>
 </body>
