@@ -3,30 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scroll Force: Restored</title>
+    <title>Scroll Force</title>
     <style>
-        :root { --accent: #007AFF; --bg: #000; --card: #111; }
+        :root { --accent: #007AFF; --bg: #000; }
         body { background: var(--bg); color: #fff; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .glass-panel { text-align: center; width: 280px; padding: 40px; background: var(--card); border-radius: 40px; border: 1px solid #222; box-shadow: 0 30px 60px rgba(0,0,0,0.8); }
         h1 { font-weight: 200; letter-spacing: 4px; font-size: 1.1rem; margin-bottom: 40px; color: #888; }
-        .setup-zone { margin-bottom: 40px; }
+        .setup-zone { margin-bottom: 40px; text-align: center; }
         label { display: block; font-size: 0.65rem; text-transform: uppercase; color: #444; margin-bottom: 15px; letter-spacing: 2px; }
-        input { background: transparent; border: none; border-bottom: 2px solid #333; color: var(--accent); font-size: 3.5rem; text-align: center; width: 120px; padding: 10px; font-weight: 200; }
-        .btn { background: #fff; color: #000; padding: 20px; border-radius: 18px; font-size: 0.9rem; font-weight: 700; border: none; cursor: pointer; width: 100%; letter-spacing: 1px; }
+        input { background: transparent; border: none; border-bottom: 2px solid #333; color: var(--accent); font-size: 3.5rem; text-align: center; width: 120px; padding: 10px; font-weight: 200; outline: none; transition: 0.3s; }
+        input:focus { border-bottom-color: var(--accent); }
+        .btn { background: #fff; color: #000; padding: 20px; border-radius: 18px; font-size: 0.9rem; font-weight: 700; border: none; cursor: pointer; width: 280px; letter-spacing: 1px; }
         #confirm { margin-top: 25px; font-size: 0.7rem; color: var(--accent); font-weight: 600; text-transform: uppercase; opacity: 0; transition: 0.3s; }
     </style>
 </head>
 <body>
 
-    <div class="glass-panel">
-        <h1>SCROLL FORCE</h1>
-        <div class="setup-zone">
-            <label>SWIPE TRIGGER (X)</label>
-            <input type="number" id="swipeLimit" placeholder="X">
-        </div>
-        <button class="btn" onclick="engage()">ENGAGE PROTOCOL</button>
-        <div id="confirm">System Armed</div>
+    <h1>SCROLL FORCE</h1>
+    <div class="setup-zone">
+        <label>TRIGGER ON SWIPE NUMBER</label>
+        <input type="number" id="swipeLimit" placeholder="?">
     </div>
+    <button class="btn" onclick="engage()">ENGAGE PROTOCOL</button>
+    <div id="confirm">System Armed</div>
 
     <script>
         const inputField = document.getElementById('swipeLimit');
@@ -35,10 +33,19 @@
         if (memory) { inputField.value = memory; }
 
         function engage() {
-            const xVal = inputField.value || 4;
+            const xVal = parseInt(inputField.value);
+            
+            if (!xVal || xVal < 1) {
+                alert("Please enter a trigger number.");
+                return;
+            }
+
             localStorage.setItem('sf-custom-limit', xVal);
             
-            const payload = `javascript:(function(){let aY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0,lA=false,lR=false;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'80px',height:'80px',zIndex:2147483647,background:'rgba(0,0,0,0.01)'});const o=document.createElement('div');Object.assign(o.style,{position:'fixed',inset:0,zIndex:2147483646,display:'none',touchAction:'none'});document.body.append(t,o);function arm(){t.style.display='block';o.style.display='none';sC=0;mR=false;if(!lA){window.addEventListener('touchstart',nw,{capture:true,passive:false});lA=true;}}function nw(e){if(mR||aY===null)return;if(!e.touches||e.touches.length!==1)return;sC++;if(sC>=${xVal}){window.removeEventListener('touchstart',nw,true);lA=false;o.style.display='block';v=0;lY=e.touches[0].clientY;lT=Date.now();d=true;loop();}}o.addEventListener('touchstart',e=>{d=true;v=0;lY=e.touches[0].clientY;lT=Date.now();},{passive:false});o.addEventListener('touchmove',e=>{e.preventDefault();let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT;},{passive:false});o.addEventListener('touchend',()=>{d=false;mR=true;force();},{passive:false});t.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>tC=0,300);if(tC>=2)location.reload();aY=window.scrollY;if(navigator.vibrate)navigator.vibrate(40);t.style.display='none';arm();},{passive:false});function loop(){if(lR)return;lR=true;(function raf(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(raf);}else{lR=false;}})();}function force(){let dist=aY-window.scrollY;let fV=dist*0.025;function step(){if(!mR)return;window.scrollBy(0,fV);fV*=0.975;if(Math.abs(fV)<0.1||Math.abs(aY-window.scrollY)<0.5){window.scrollTo(0,aY);aY=null;arm();return;}requestAnimationFrame(step);}step();}arm();})();`;
+            /* Logic: Trigger on the Xth swipe means we stop normal scrolling after X-1 swipes */
+            const triggerAt = xVal - 1;
+
+            const payload = `javascript:(function(){let aY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0,lA=false,lR=false;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'80px',height:'80px',zIndex:2147483647,background:'transparent'});const o=document.createElement('div');Object.assign(o.style,{position:'fixed',inset:0,zIndex:2147483646,display:'none',touchAction:'none'});document.body.append(t,o);function arm(){t.style.display='block';o.style.display='none';sC=0;mR=false;if(!lA){window.addEventListener('touchstart',nw,{capture:true,passive:false});lA=true;}}function nw(e){if(mR||aY===null)return;if(!e.touches||e.touches.length!==1)return;sC++;if(sC>=${triggerAt}){window.removeEventListener('touchstart',nw,true);lA=false;o.style.display='block';v=0;lY=e.touches[0].clientY;lT=Date.now();d=true;loop();}}o.addEventListener('touchstart',e=>{d=true;v=0;lY=e.touches[0].clientY;lT=Date.now();},{passive:false});o.addEventListener('touchmove',e=>{e.preventDefault();let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT;},{passive:false});o.addEventListener('touchend',()=>{d=false;mR=true;force();},{passive:false});t.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>tC=0,300);if(tC>=2)location.reload();aY=window.scrollY;if(navigator.vibrate)navigator.vibrate(40);t.style.display='none';arm();},{passive:false});function loop(){if(lR)return;lR=true;(function raf(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(raf);}else{lR=false;}})();}function force(){let dist=aY-window.scrollY;let fV=dist*0.025;function step(){if(!mR)return;window.scrollBy(0,fV);fV*=0.975;if(Math.abs(fV)<0.1||Math.abs(aY-window.scrollY)<0.5){window.scrollTo(0,aY);aY=null;arm();return;}requestAnimationFrame(step);}step();}arm();})();`;
 
             navigator.clipboard.writeText(payload).then(() => {
                 confirmMsg.style.opacity = "1";
