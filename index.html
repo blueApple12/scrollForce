@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spectrum</title>
+    <title>Spectrum Picker</title>
     <style>
         body { 
-            margin: 0; background: #000; font-family: 'Segoe UI', sans-serif; 
+            margin: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             overflow: hidden; height: 100vh; touch-action: none;
         }
         #stage {
@@ -16,14 +16,10 @@
         .box { 
             width: 100%; height: 200px; 
             display: flex; justify-content: center; align-items: center; 
-            color: white; font-size: 1.4rem; font-weight: 300;
+            color: white; font-size: 1.5rem; font-weight: 500;
             letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        /* Specific styling for the Red Force */
-        #secret-target {
-            font-weight: 800;
-            font-size: 2rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
     </style>
 </head>
@@ -34,7 +30,7 @@
     <script>
         const stage = document.getElementById('stage');
         const BOX_COUNT = 60;
-        const FORCED_INDEX = 25; 
+        const FORCED_INDEX = 25; // This corresponds to "Color 26"
         
         let currentY = -2500; 
         let velocity = 0;
@@ -45,32 +41,32 @@
         let isArmed = false; 
         let holdTimer;
 
-        // 1. Generate Constant Gradient Colors
+        // 1. Generate Constant Gradient
         for (let i = 0; i < BOX_COUNT; i++) {
             const box = document.createElement('div');
             box.className = 'box';
             
-            // Forces Box 25 to be Pure Red, others follow a smooth spectrum
+            // Box 26 is forced to be Pure Red (Hue 0)
             let hue;
             if (i === FORCED_INDEX) {
-                hue = 0; // Pure Red
+                hue = 0; 
                 box.id = "secret-target";
-                box.innerText = "RED";
             } else {
-                hue = (i * 13) % 360; 
-                box.innerText = "Color " + (i + 1);
+                // Creates a smooth, shifting spectrum
+                hue = (i * 15) % 360; 
             }
             
-            box.style.background = `hsl(${hue}, 70%, 45%)`;
+            box.innerText = "Color " + (i + 1);
+            box.style.background = `hsl(${hue}, 75%, 45%)`;
             stage.appendChild(box);
         }
 
         function update() {
             if (!isDragging) {
                 currentY += velocity;
-                velocity *= 0.95; // Natural Friction
+                velocity *= 0.96; // iOS-style friction
                 
-                // Keep within bounds
+                // Keep within boundaries
                 const maxScroll = -((BOX_COUNT * 200) - window.innerHeight);
                 if (currentY > 0) { currentY *= 0.5; velocity = 0; }
                 if (currentY < maxScroll) { currentY = maxScroll; velocity = 0; }
@@ -90,10 +86,11 @@
             velocity = 0;
             lastTouchY = e.touches[0].clientY;
             
+            // Secret Arming: Hold 1 second while stationary
             if (!isArmed) {
                 holdTimer = setTimeout(() => {
                     isArmed = true;
-                    if (navigator.vibrate) navigator.vibrate([40, 30, 40]); 
+                    if (navigator.vibrate) navigator.vibrate([40, 40]); 
                 }, 1000);
             }
         });
@@ -113,7 +110,7 @@
             isDragging = false;
             clearTimeout(holdTimer);
 
-            // If armed and they flicked (velocity check), execute the force
+            // The Force Trigger: Fires on the first release AFTER arming
             if (isArmed && Math.abs(velocity) > 1.5) {
                 isArmed = false; 
                 cancelAnimationFrame(animationFrame);
@@ -123,19 +120,19 @@
 
         function forceToTarget() {
             const target = document.getElementById('secret-target');
-            // Centering math
+            // Calculate perfect center
             const targetY = -(target.offsetTop - (window.innerHeight / 2) + 100);
             const startY = currentY;
             const distance = targetY - startY;
             
-            const duration = 1500; // Slightly longer for a more "magical" glide
+            const duration = 1800; // Long, cinematic glide
             const startTime = performance.now();
 
             function animate(time) {
                 const elapsed = time - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
-                // Quintic Out Easing: Super fast start, very long smooth finish
+                // Quintic Out Easing for that "magic" heavy momentum feel
                 const ease = 1 - Math.pow(1 - progress, 5); 
                 
                 currentY = startY + (distance * ease);
