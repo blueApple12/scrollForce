@@ -2,37 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>scrollForce</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Scroll Force | Protocol</title>
     <style>
-        body { background: #000; color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .btn { background: #4285f4; color: white; padding: 22px 45px; border-radius: 50px; font-size: 1.1rem; font-weight: 600; border: none; cursor: pointer; transition: 0.3s; }
-        .btn:active { background: #3367d6; transform: scale(0.95); }
-        #loader { display: none; margin-top: 20px; color: #888; font-size: 0.9rem; }
+        :root { --accent: #007AFF; --bg: #0a0a0a; --card: #161616; }
+        body { background: var(--bg); color: #fff; font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        
+        .container { text-align: center; width: 85%; max-width: 400px; padding: 40px; background: var(--card); border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); border: 1px solid #222; }
+        
+        h1 { font-weight: 300; letter-spacing: 2px; font-size: 1.4rem; margin-bottom: 30px; color: #eee; }
+        
+        .input-group { margin-bottom: 30px; }
+        label { display: block; font-size: 0.7rem; text-transform: uppercase; color: #666; margin-bottom: 10px; letter-spacing: 1px; }
+        input { background: #000; border: 1px solid #333; color: var(--accent); font-size: 2rem; text-align: center; width: 80px; padding: 10px; border-radius: 12px; font-family: serif; }
+        input:focus { outline: none; border-color: var(--accent); }
+
+        .btn { background: var(--accent); color: white; padding: 18px 40px; border-radius: 50px; font-size: 1rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; width: 100%; box-shadow: 0 10px 20px rgba(0,122,255,0.2); }
+        .btn:active { transform: scale(0.96); opacity: 0.8; }
+        
+        #status { margin-top: 20px; font-size: 0.8rem; color: #444; height: 1em; }
     </style>
 </head>
 <body>
 
-    <button class="btn" id="mainBtn" onclick="run()">Copy Inject Code</button>
-    <div id="loader">Injecting Protocols...</div>
+    <div class="container">
+        <h1>SCROLL FORCE</h1>
+        
+        <div class="input-group">
+            <label>Activation Swipes</label>
+            <input type="number" id="swipeLimit" value="4" min="1" max="99">
+        </div>
+
+        <button class="btn" onclick="initializeProtocol()">INITIALIZE PROTOCOL</button>
+        <div id="status"></div>
+    </div>
 
     <script>
-        function run() {
-            const btn = document.getElementById('mainBtn');
-            const loader = document.getElementById('loader');
-            btn.style.display = 'none';
-            loader.style.display = 'block';
+        // Memory Feature: Load previously saved number
+        const inputField = document.getElementById('swipeLimit');
+        const savedLimit = localStorage.getItem('sf-limit');
+        if (savedLimit) {
+            inputField.value = savedLimit;
+        }
 
-            // PASTE THE NEW COMPRESSED SCRIPT BELOW
-            const magicCode = "javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647,background:'transparent'});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.remove();loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=4&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none'}}requestAnimationFrame(anim)}})();";
+        function initializeProtocol() {
+            const limit = inputField.value;
+            const status = document.getElementById('status');
+            
+            // Save to memory
+            localStorage.setItem('sf-limit', limit);
+            
+            // Generate Payload with the custom swipe limit
+            const magicCode = `javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>{tC=0},300);if(tC>=2){location.reload();return;}fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.remove();loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=${limit}&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none'}}requestAnimationFrame(anim)}})();`;
 
             navigator.clipboard.writeText(magicCode).then(() => {
+                status.innerText = "Protocol Copied. Redirecting...";
                 setTimeout(() => {
-                    window.location.href = "https://www.google.com/";
-                }, 800);
+                    window.location.href = "https://www.google.com/imghp";
+                }, 1000);
             });
         }
-        
     </script>
 </body>
 </html>
