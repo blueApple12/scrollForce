@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Universal Force</title>
+    <title>Universal Force Pro</title>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         
-        /* The Website Frame */
         #site-wrapper {
+            position: absolute;
             width: 100%;
-            height: 100%;
+            height: 10000px; /* High value to allow internal scrolling */
             border: none;
             will-change: transform;
         }
 
-        /* Invisible touch layer to capture swipes */
         #touch-surface {
             position: fixed;
             top: 0; left: 0;
@@ -23,42 +22,47 @@
             z-index: 999;
             touch-action: none;
         }
-
-        #status {
-            position: fixed; top: 10px; left: 10px;
-            color: rgba(255,255,255,0.2); font-size: 10px; z-index: 1000;
-            pointer-events: none;
-        }
     </style>
 </head>
 <body>
 
-    <div id="status">IDLE</div>
-    
     <iframe id="site-wrapper" src="https://www.wikipedia.org"></iframe>
     
     <div id="touch-surface"></div>
 
     <script>
         const wrapper = document.getElementById('site-wrapper');
-        const status = document.getElementById('status');
+        const surface = document.getElementById('touch-surface');
         
         let currentY = 0;
         let velocity = 0;
         let isDragging = false;
         let lastTouchY = 0;
         
-        // Trick Logic
         let forcedY = null;
         let holdTimer;
         let swipeCount = 0;
         let isMagicActive = false;
+        let hasMovedDuringTouch = false;
 
-        // 1. Manual Physics Loop
+        // 1. Physics & Boundary Loop
         function loop() {
             if (!isDragging && !isMagicActive) {
                 currentY += velocity;
                 velocity *= 0.95; 
+
+                // Boundary Check: Don't scroll outside the top
+                if (currentY > 0) {
+                    currentY = 0;
+                    velocity = 0;
+                }
+                // Boundary Check: Approximate bottom (adjust based on site length)
+                const minScroll = -(10000 - window.innerHeight);
+                if (currentY < minScroll) {
+                    currentY = minScroll;
+                    velocity = 0;
+                }
+
                 render();
             }
             requestAnimationFrame(loop);
@@ -66,33 +70,37 @@
         loop();
 
         function render() {
-            // We move the iframe itself to simulate scrolling
             wrapper.style.transform = `translateY(${currentY}px)`;
         }
 
-        // 2. Touch Handling
-        const surface = document.getElementById('touch-surface');
-
+        // 2. Touch Interaction
         surface.addEventListener('touchstart', (e) => {
             isDragging = true;
             velocity = 0;
             lastTouchY = e.touches[0].clientY;
+            hasMovedDuringTouch = false;
 
-            // Long Press to set the Anchor
+            // Long Press Logic
             holdTimer = setTimeout(() => {
-                forcedY = currentY; // Saves whatever is in the center of the screen
-                if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-                status.innerText = "ANCHOR SET";
-                swipeCount = 0; // Reset counter for the new anchor
-            }, 1000);
+                if (!hasMovedDuringTouch) {
+                    forcedY = currentY; 
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                    swipeCount = 0; // Reset counter when a new anchor is set
+                }
+            }, 800);
         });
 
         surface.addEventListener('touchmove', (e) => {
-            clearTimeout(holdTimer);
             const moveY = e.touches[0].clientY;
             const delta = moveY - lastTouchY;
             
-            if (!isMagicActive) {
+            // If movement is significant, it's a swipe, not a hold
+            if (Math.abs(delta) > 5) {
+                hasMovedDuringTouch = true;
+                clearTimeout(holdTimer);
+            }
+
+            if (!isMagicActive && isDragging) {
                 currentY += delta;
                 velocity = delta;
                 render();
@@ -104,11 +112,11 @@
             isDragging = false;
             clearTimeout(holdTimer);
 
-            if (forcedY !== null) {
+            // Only count as a swipe if the user actually moved the screen
+            if (forcedY !== null && hasMovedDuringTouch) {
                 swipeCount++;
-                status.innerText = "SWIPE: " + swipeCount;
 
-                // TRIGGER: On the 2nd swipe, force the glide
+                // TRIGGER: On the 2nd swipe release
                 if (swipeCount >= 2) {
                     executeForce();
                 }
@@ -125,18 +133,19 @@
             function animate(time) {
                 const elapsed = time - startTime;
                 const progress = Math.min(elapsed / duration, 1);
+                
+                // Quintic Out: Very fast start, very smooth stop
                 const ease = 1 - Math.pow(1 - progress, 5);
                 
-                currentY = startPos = startY + (distance * ease);
+                currentY = startY + (distance * ease);
                 render();
 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
                     isMagicActive = false;
-                    forcedY = null; // Reset trick
                     swipeCount = 0;
-                    status.innerText = "COMPLETE";
+                    forcedY = null; // Trick spent
                 }
             }
             requestAnimationFrame(animate);
