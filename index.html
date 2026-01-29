@@ -3,155 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magic Anchor Tech</title>
+    <title>Color Picker</title>
     <style>
-        :root { --accent: #ff4757; }
         body {
             margin: 0;
-            background: #0f0f0f;
-            font-family: 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            font-family: sans-serif;
             color: white;
-            overflow-x: hidden;
+            /* Prevents the "bounce" effect on iOS */
+            overscroll-behavior: none; 
         }
 
-        /* The Dashboard */
-        #ui {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            text-align: center;
-            width: 80%;
-            pointer-events: none;
-        }
-
-        .badge {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 10px 20px;
-            border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.2);
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-
-        .locked { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 20px rgba(255, 71, 87, 0.3); }
-
-        /* The Boxes */
         .container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 50vh 0;
-            gap: 20px;
+            padding: 20vh 0;
+            gap: 10px;
         }
 
         .box {
-            width: 90vw;
-            height: 200px;
-            border-radius: 15px;
+            width: 95vw;
+            height: 150px;
+            border-radius: 8px;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-weight: bold;
-            font-size: 1.2rem;
-            transition: transform 0.2s;
-            user-select: none;
-            -webkit-user-select: none;
+            text-transform: uppercase;
+            font-size: 1.5rem;
         }
 
         #target {
-            background: var(--accent);
-            height: 300px;
-            border: 4px solid white;
-            box-shadow: 0 0 40px rgba(255, 71, 87, 0.6);
-            cursor: pointer;
-            touch-action: none; /* Prevents scrolling while holding */
+            background: #ff4757 !important; /* The Forced Red */
         }
-
-        .box:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div id="status-badge" class="badge">HOLD RED TO LOCK ANCHOR</div>
-        <div id="force-val" style="font-size: 3rem; margin-top: 10px; font-weight: 900; opacity: 0;">0</div>
-    </div>
-
-    <div class="container" id="box-wrapper">
+    <div class="container" id="list">
         </div>
 
     <script>
-        const wrapper = document.getElementById('box-wrapper');
-        const badge = document.getElementById('status-badge');
-        const forceLabel = document.getElementById('force-val');
-        
-        let isLocked = false;
-        let anchorY = 0;
+        const list = document.getElementById('list');
+        let isArmed = false;
         let holdTimer;
+        let forceTargetY = 0;
 
-        // 1. Generate 20 Colorful Boxes
-        for (let i = 1; i <= 20; i++) {
+        // 1. Create 20 boxes with random-ish colors
+        const colorNames = ["Emerald", "Sunflower", "Peter River", "Amethyst", "Wet Asphalt", "Carrot", "Alizarin", "Turquoise", "Concrete", "Orange", "Pumpkin", "Pomegranate", "Silver", "Asbestos", "Belize Hole", "Midnight Blue", "Nephritis", "Wisteria", "Clouds", "Sun Flower"];
+        
+        for (let i = 0; i < 20; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            
-            if (i === 10) {
+            // Box 13 is our "Forced" color (Middle-ish)
+            if (i === 13) {
                 box.id = 'target';
-                box.innerHTML = '<span>HOLD ME</span><small>Magic Anchor</small>';
+                box.innerText = "Red";
             } else {
-                box.style.background = `hsl(${i * 18}, 60%, 50%)`;
-                box.innerText = `Box ${i}`;
+                box.style.background = `hsl(${i * 137.5}, 50%, 45%)`; // Distributes colors nicely
+                box.innerText = colorNames[i];
             }
-            wrapper.appendChild(box);
+            list.appendChild(box);
         }
 
-        const target = document.getElementById('target');
-
-        // 2. Long Press Logic
-        target.addEventListener('touchstart', (e) => {
+        // 2. SECRET ARMING: Long press anywhere for 1 second
+        window.addEventListener('touchstart', (e) => {
             holdTimer = setTimeout(() => {
-                activateAnchor();
-            }, 800); // Hold for 0.8 seconds
+                isArmed = true;
+                const target = document.getElementById('target');
+                // Calculate position to center the Red box
+                forceTargetY = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
+                
+                // Silent haptic feedback for the magician
+                if (navigator.vibrate) navigator.vibrate(50); 
+                console.log("Trick Armed");
+            }, 1000);
         });
 
-        target.addEventListener('touchend', () => clearTimeout(holdTimer));
+        window.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        function activateAnchor() {
-            isLocked = true;
-            anchorY = target.offsetTop + (target.offsetHeight / 2) - (window.innerHeight / 2);
-            
-            // UI Feedback
-            badge.innerText = "ANCHOR LOCKED";
-            badge.classList.add('locked');
-            forceLabel.style.opacity = "1";
-            
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Magic vibration
-        }
-
-        // 3. The Elastic Effect
-        window.addEventListener('scroll', () => {
-            if (!isLocked) return;
-
-            const dist = Math.abs(window.scrollY - anchorY);
-            forceLabel.innerText = Math.floor(dist);
-            forceLabel.style.transform = `scale(${1 + dist/1000})`;
-            forceLabel.style.color = `rgb(255, ${255 - dist/5}, ${255 - dist/5})`;
-        });
-
-        // 4. Snap back on Release
+        // 3. THE FORCE: Snap to red on the very next release
         window.addEventListener('touchend', () => {
-            if (!isLocked) return;
-
-            // Wait a tiny bit for the finger to actually leave the screen
-            setTimeout(() => {
-                window.scrollTo({
-                    top: anchorY,
-                    behavior: 'smooth'
-                });
-            }, 50);
+            if (isArmed) {
+                // Smoothly slide to the red box
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: forceTargetY,
+                        behavior: 'smooth'
+                    });
+                    
+                    // 4. RESET: Turn off the trick so it looks normal again
+                    isArmed = false;
+                }, 100); 
+            }
         });
 
     </script>
