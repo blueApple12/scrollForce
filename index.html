@@ -3,39 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Browser</title>
+    <title>Universal Browser</title>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         
-        /* Container that allows the iframe to scroll naturally */
         #scroll-container {
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             overflow-y: scroll;
             -webkit-overflow-scrolling: touch;
-            scroll-behavior: auto;
         }
 
         #site-wrapper {
-            width: 100%;
-            height: 8000px; /* Adjust based on site length */
-            border: none;
-            display: block;
+            width: 100%; height: 10000px; /* Force height for Wiki */
+            border: none; display: block;
         }
 
-        /* The Interceptor - only appears AFTER you hold */
+        /* Invisible Button in Top Left (40x40px) */
+        #arm-trigger {
+            position: fixed;
+            top: 0; left: 0;
+            width: 50px; height: 50px;
+            z-index: 10000;
+            background: transparent;
+        }
+
+        /* Invisible Interceptor - active only when armed */
         #magic-interceptor {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
             z-index: 9999;
-            display: none; /* Hidden until Armed */
+            display: none;
             touch-action: none;
         }
     </style>
 </head>
 <body>
 
+    <div id="arm-trigger"></div>
+    
     <div id="scroll-container">
         <iframe id="site-wrapper" src="https://en.m.wikipedia.org"></iframe>
     </div>
@@ -45,34 +51,23 @@
     <script>
         const container = document.getElementById('scroll-container');
         const interceptor = document.getElementById('magic-interceptor');
+        const trigger = document.getElementById('arm-trigger');
         
         let forcedY = null;
-        let holdTimer;
         let swipeCount = 0;
-        let isArmed = false;
-        let isMagicActive = false;
+        let isMagicRunning = false;
 
-        // 1. SETTING THE PICK (Normal scrolling mode)
-        container.addEventListener('touchstart', (e) => {
-            if (isArmed) return; // Don't reset if already armed
-
-            holdTimer = setTimeout(() => {
-                // Record the current scroll position
-                forcedY = container.scrollTop;
-                isArmed = true;
-                
-                if (navigator.vibrate) navigator.vibrate([60, 40]);
-                
-                // SHOW the interceptor. Links stop working now, 
-                // but the spectator won't notice because they are about to "fling".
-                interceptor.style.display = 'block';
-            }, 1000); 
+        // 1. SECRET ARMING (Tap Top-Left Corner)
+        trigger.addEventListener('click', () => {
+            forcedY = container.scrollTop;
+            if (navigator.vibrate) navigator.vibrate([40, 40]);
+            
+            // Activate the trap
+            interceptor.style.display = 'block';
+            console.log("Anchor Set at: " + forcedY);
         });
 
-        container.addEventListener('touchmove', () => clearTimeout(holdTimer));
-        container.addEventListener('touchend', () => clearTimeout(holdTimer));
-
-        // 2. THE MAGIC SWIPES (Interceptor mode)
+        // 2. INTERCEPTOR LOGIC (Spectator's Swipes)
         let startY = 0;
         let scrollStart = 0;
 
@@ -82,49 +77,49 @@
         });
 
         interceptor.addEventListener('touchmove', (e) => {
-            if (isMagicActive) return;
+            if (isMagicRunning) return;
             const delta = startY - e.touches[0].clientY;
             container.scrollTop = scrollStart + delta;
         });
 
         interceptor.addEventListener('touchend', () => {
-            if (isMagicActive) return;
+            if (isMagicRunning) return;
             
             swipeCount++;
 
-            // On the 2nd release, perform the smooth glide
+            // On the 2nd flick release
             if (swipeCount >= 2 && forcedY !== null) {
-                executeMagicGlide(forcedY);
+                executeForce();
             }
         });
 
-        function executeMagicGlide(target) {
-            isMagicActive = true;
+        function executeForce() {
+            isMagicRunning = true;
             const start = container.scrollTop;
-            const distance = target - start;
+            const distance = forcedY - start;
             const duration = 1800;
             let startTime = null;
 
-            function step(timestamp) {
+            function animate(timestamp) {
                 if (!startTime) startTime = timestamp;
                 const progress = Math.min((timestamp - startTime) / duration, 1);
                 
-                // Smooth deceleration
+                // Exponential Ease Out
                 const ease = 1 - Math.pow(1 - progress, 5);
                 
                 container.scrollTop = start + (distance * ease);
 
                 if (progress < 1) {
-                    requestAnimationFrame(step);
+                    requestAnimationFrame(animate);
                 } else {
-                    // RESET EVERYTHING
-                    isMagicActive = false;
-                    isArmed = false;
+                    // RESET
+                    isMagicRunning = false;
                     swipeCount = 0;
-                    interceptor.style.display = 'none'; // Links work again
+                    forcedY = null;
+                    interceptor.style.display = 'none'; 
                 }
             }
-            requestAnimationFrame(step);
+            requestAnimationFrame(animate);
         }
     </script>
 </body>
