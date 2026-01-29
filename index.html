@@ -3,110 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inertia Master</title>
+    <title>Locked Magic</title>
     <style>
         body { 
             margin: 0; background: #000; font-family: sans-serif; 
-            overflow: hidden; height: 100vh; touch-action: none;
+            overflow: hidden; /* Disable native scroll completely */
+            height: 100vh; touch-action: none;
         }
-        #scroller {
-            position: absolute; width: 100%; top: 0; left: 0;
-            will-change: transform; /* Fixes the 'gradient/transparent' blur issue */
+        #stage {
+            position: fixed; width: 100%; top: 0; left: 0;
+            will-change: transform; /* optimizing performance */
         }
         .box { 
             width: 100%; height: 200px; 
             display: flex; justify-content: center; align-items: center; 
-            color: #555; font-size: 1.5rem; font-weight: bold;
+            color: #666; font-size: 1.5rem; font-weight: bold;
             border-bottom: 2px solid #111; background: #0a0a0a;
         }
-        #target { background: #ff0000 !important; color: white !important; }
+        #target { 
+            background: #ff0000 !important; 
+            color: white !important; 
+            box-shadow: 0 0 50px rgba(255,0,0,0.2);
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
 
-    <div id="scroller"></div>
+    <div id="stage"></div>
 
     <script>
-        const scroller = document.getElementById('scroller');
+        const stage = document.getElementById('stage');
+        
+        // Physics Variables
         let currentY = 0;
         let velocity = 0;
-        let isArmed = false;
-        let isTouching = false;
-        let lastTouchY = 0;
-        let holdTimer;
-        let animLoop;
+        let isDragging = false;
+        let lastY = 0;
+        let animationFrame;
 
-        // 1. Setup 50 Solid Boxes
-        for (let i = 1; i <= 50; i++) {
+        // Magic Variables
+        let isLocked = false;
+        let hasFlung = false;
+        let holdTimer;
+        let magicModeActive = false;
+
+        // 1. Build the List
+        for (let i = 1; i <= 40; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === 30) { box.id = 'target'; box.innerText = "RED"; }
-            else { box.innerText = "Item " + i; }
-            scroller.appendChild(box);
-        }
-
-        // 2. Physics Engine (Inertia)
-        function update() {
-            if (!isTouching) {
-                if (isArmed) {
-                    // MAGIC MODE: Force glide to Red
-                    const target = document.getElementById('target');
-                    const targetY = -(target.offsetTop - (window.innerHeight / 2) + 100);
-                    const dist = targetY - currentY;
-                    
-                    currentY += dist * 0.08; // Smooth magnetic pull
-                    if (Math.abs(dist) < 0.1) {
-                        currentY = targetY;
-                        isArmed = false; // Reset trick
-                    }
-                } else {
-                    // NORMAL MODE: Natural friction
-                    currentY += velocity;
-                    velocity *= 0.95; // Friction
-                }
-                render();
+            if (i === 20) { 
+                box.id = 'target'; 
+                box.innerText = "RED TARGET"; 
+            } else { 
+                box.innerText = "Item " + i; 
             }
-            animLoop = requestAnimationFrame(update);
+            stage.appendChild(box);
         }
 
-        function render() {
-            scroller.style.transform = `translateY(${currentY}px)`;
+        // 2. The Main Physics Loop
+        function loop() {
+            if (!isDragging && !magicModeActive) {
+                // Apply Inertia (Friction)
+                currentY += velocity;
+                velocity *= 0.95; // Friction factor
+
+                // Stop tiny movements
+                if (Math.abs(velocity) < 0.1) velocity = 0;
+                
+                updatePosition();
+            }
+            animationFrame = requestAnimationFrame(loop);
+        }
+        loop(); // Start loop
+
+        function updatePosition() {
+            stage.style.transform = `translateY(${currentY}px)`;
         }
 
-        // 3. Touch Controls
+        // 3. Touch Events
         window.addEventListener('touchstart', (e) => {
-            isTouching = true;
-            velocity = 0; // Stop previous inertia
-            lastTouchY = e.touches[0].pageY;
+            isDragging = true;
+            velocity = 0; // Kill momentum on touch
+            lastY = e.touches[0].clientY;
+            hasFlung = false;
 
+            // Start the Magic Hold Timer
             holdTimer = setTimeout(() => {
-                isArmed = true;
-                if (navigator.vibrate) navigator.vibrate(60);
-            }, 1000);
+                isLocked = true; // FREEZE THE SCROLL
+                if (navigator.vibrate) navigator.vibrate(50); // Signal to you
+            }, 800); // 0.8 seconds to lock
         });
 
         window.addEventListener('touchmove', (e) => {
-            if (isArmed) {
-                // While armed, the finger "slips" - no movement allowed
-                return;
+            const clientY = e.touches[0].clientY;
+            const delta = clientY - lastY;
+            lastY = clientY;
+
+            // DETECT FLING ATTEMPT
+            if (Math.abs(delta) > 2) hasFlung = true;
+
+            // IF LOCKED: DO NOT MOVE THE SCREEN
+            if (isLocked) {
+                return; 
             }
-            clearTimeout(holdTimer);
-            const moveY = e.touches[0].pageY;
-            const delta = moveY - lastTouchY;
-            
-            velocity = delta; // Build velocity for inertia
+
+            // Normal Scroll
+            clearTimeout(holdTimer); // If they move before 0.8s, cancel lock
             currentY += delta;
-            lastTouchY = moveY;
-            render();
+            velocity = delta; // Save speed for inertia
+            updatePosition();
         });
 
         window.addEventListener('touchend', () => {
-            isTouching = false;
+            isDragging = false;
             clearTimeout(holdTimer);
+
+            // THE MAGIC TRIGGER
+            if (isLocked && hasFlung) {
+                // Determine they held, then tried to fling, then let go
+                isLocked = false; 
+                magicModeActive = true; // Take over physics loop
+                scrollToRed();
+            } else {
+                // If they just tapped or held without flinging, reset lock
+                isLocked = false; 
+            }
         });
 
-        // Start the loop
-        update();
+        // 4. The Magic Animation
+        function scrollToRed() {
+            const target = document.getElementById('target');
+            // Calculate exact center position
+            // We want the target's center to match the screen's center
+            // currentY is negative (scrolling down moves content up)
+            
+            // Formula: - (BoxOffset - ScreenHalf + BoxHalf)
+            const targetPos = - (target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2));
+            
+            const startPos = currentY;
+            const distance = targetPos - startPos;
+            const startTime = performance.now();
+            const duration = 800; // 0.8 seconds to arrive
+
+            function animate(time) {
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function (Ease Out Quart) - starts fast, stops gentle
+                const ease = 1 - Math.pow(1 - progress, 4);
+                
+                currentY = startPos + (distance * ease);
+                updatePosition();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // FINISHED
+                    magicModeActive = false; 
+                    velocity = 0; // Ensure it stays dead still
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
     </script>
 </body>
 </html>
