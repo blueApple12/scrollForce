@@ -3,102 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Color Picker</title>
+    <title>Color Stream</title>
     <style>
-        body {
-            margin: 0;
-            background: #1a1a1a;
-            font-family: sans-serif;
-            color: white;
-            /* Prevents the "bounce" effect on iOS */
-            overscroll-behavior: none; 
+        body { margin: 0; background: #111; font-family: sans-serif; overflow-x: hidden; touch-action: pan-y; }
+        .container { display: flex; flex-direction: column; gap: 10px; padding: 50vh 0; }
+        .box { 
+            width: 100vw; height: 180px; 
+            display: flex; justify-content: center; align-items: center; 
+            color: rgba(255,255,255,0.3); font-weight: bold; font-size: 2rem;
         }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20vh 0;
-            gap: 10px;
-        }
-
-        .box {
-            width: 95vw;
-            height: 150px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 1.5rem;
-        }
-
-        #target {
-            background: #ff4757 !important; /* The Forced Red */
-        }
+        #target { background: #ff4757 !important; color: white !important; box-shadow: inset 0 0 50px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-    <div class="container" id="list">
-        </div>
+    <div class="container" id="list"></div>
 
     <script>
         const list = document.getElementById('list');
         let isArmed = false;
         let holdTimer;
-        let forceTargetY = 0;
 
-        // 1. Create 20 boxes with random-ish colors
-        const colorNames = ["Emerald", "Sunflower", "Peter River", "Amethyst", "Wet Asphalt", "Carrot", "Alizarin", "Turquoise", "Concrete", "Orange", "Pumpkin", "Pomegranate", "Silver", "Asbestos", "Belize Hole", "Midnight Blue", "Nephritis", "Wisteria", "Clouds", "Sun Flower"];
-        
-        for (let i = 0; i < 20; i++) {
+        // Generate 20 boxes
+        for (let i = 1; i <= 20; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            // Box 13 is our "Forced" color (Middle-ish)
-            if (i === 13) {
+            if (i === 14) {
                 box.id = 'target';
-                box.innerText = "Red";
+                box.innerText = "RED";
             } else {
-                box.style.background = `hsl(${i * 137.5}, 50%, 45%)`; // Distributes colors nicely
-                box.innerText = colorNames[i];
+                box.style.background = `hsl(${i * 25}, 40%, 30%)`;
+                box.innerText = i;
             }
             list.appendChild(box);
         }
 
-        // 2. SECRET ARMING: Long press anywhere for 1 second
-        window.addEventListener('touchstart', (e) => {
+        // Secret Arming (Hold anywhere for 1s)
+        window.addEventListener('touchstart', () => {
             holdTimer = setTimeout(() => {
                 isArmed = true;
-                const target = document.getElementById('target');
-                // Calculate position to center the Red box
-                forceTargetY = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
-                
-                // Silent haptic feedback for the magician
-                if (navigator.vibrate) navigator.vibrate(50); 
-                console.log("Trick Armed");
+                if (navigator.vibrate) navigator.vibrate(60); 
             }, 1000);
         });
-
         window.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        // 3. THE FORCE: Snap to red on the very next release
-        window.addEventListener('touchend', () => {
-            if (isArmed) {
-                // Smoothly slide to the red box
-                setTimeout(() => {
-                    window.scrollTo({
-                        top: forceTargetY,
-                        behavior: 'smooth'
-                    });
-                    
-                    // 4. RESET: Turn off the trick so it looks normal again
-                    isArmed = false;
-                }, 100); 
-            }
-        });
+        // The Momentum Hijack
+        window.addEventListener('scroll', () => {
+            if (!isArmed) return;
 
+            // Once the user starts a "real" scroll while armed...
+            isArmed = false; // Trigger once
+            
+            const target = document.getElementById('target');
+            const targetPos = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
+
+            // We use a slight delay to let their initial "flick" start,
+            // then we smoothly override the momentum to the target.
+            setTimeout(() => {
+                window.scrollTo({
+                    top: targetPos,
+                    behavior: 'smooth'
+                });
+            }, 50); 
+        });
     </script>
 </body>
 </html>
