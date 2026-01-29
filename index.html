@@ -3,17 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magic Inertia</title>
+    <title>Magic Force</title>
     <style>
-        body { margin: 0; background: #050505; font-family: sans-serif; overflow-x: hidden; touch-action: pan-y; }
-        .container { display: flex; flex-direction: column; gap: 15px; padding: 100vh 0; }
-        .box { 
-            width: 100vw; height: 160px; 
-            display: flex; justify-content: center; align-items: center; 
-            color: rgba(255,255,255,0.15); font-size: 1.8rem; font-weight: bold;
-            transition: background 0.3s;
+        body { 
+            margin: 0; 
+            background: #000; 
+            font-family: sans-serif; 
+            overflow-x: hidden; 
+            touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
         }
-        #target { background: #ff4757 !important; color: white !important; text-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .container { display: flex; flex-direction: column; gap: 0; padding: 100vh 0; }
+        .box { 
+            width: 100vw; height: 200px; 
+            display: flex; justify-content: center; align-items: center; 
+            color: white; font-size: 1.5rem; font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        #target { 
+            background: #ff0000 !important; 
+            height: 250px;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -24,67 +35,77 @@
         const list = document.getElementById('list');
         let isArmed = false;
         let isForcing = false;
-        let holdTimer;
         let animationId;
+        let holdTimer;
 
-        // 1. Create 20 Boxes
-        for (let i = 1; i <= 20; i++) {
+        // 1. Build list with solid colors (No gradients)
+        const colors = ['#2c3e50', '#2980b9', '#8e44ad', '#27ae60', '#f39c12', '#d35400', '#c0392b', '#16a085', '#2c3e50', '#7f8c8d'];
+        for (let i = 1; i <= 25; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === 12) {
+            if (i === 15) {
                 box.id = 'target';
-                box.innerText = "RED";
+                box.innerText = "THE CHOICE";
             } else {
-                box.style.background = `hsl(${i * 18}, 30%, 15%)`;
-                box.innerText = i;
+                box.style.background = colors[i % colors.length];
+                box.innerText = "Color " + i;
             }
             list.appendChild(box);
         }
 
-        // 2. SECRET ARMING (Long press anywhere)
-        window.addEventListener('touchstart', (e) => {
+        // 2. Secret Arming
+        window.addEventListener('touchstart', () => {
             if (isForcing) return;
             holdTimer = setTimeout(() => {
                 isArmed = true;
-                if (navigator.vibrate) navigator.vibrate(60); // Magician's secret signal
+                if (navigator.vibrate) navigator.vibrate(50);
             }, 1000);
         });
-
         window.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        // 3. THE TRIGGER
-        // We only start the magic AFTER the first scroll event occurs while armed
+        // 3. Trigger on User Scroll
         window.addEventListener('scroll', () => {
-            if (isArmed && !isForcing) {
-                isArmed = false; // Prevent re-triggering
-                isForcing = true; // Enter "Force Mode"
+            if (isArmed) {
+                isArmed = false; 
+                isForcing = true; 
             }
         });
 
-        // 4. THE PHYSICS (Only triggers when they let go of the screen)
+        // 4. Smooth Anchor Inertia
         window.addEventListener('touchend', () => {
             if (isForcing) {
-                cancelAnimationFrame(animationId);
-                smoothForce();
+                requestAnimationFrame(glideToTarget);
             }
         });
 
-        function smoothForce() {
-            const target = document.getElementById('target');
-            // Perfect center position
-            const targetY = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
-            
-            const currentY = window.scrollY;
-            const diff = targetY - currentY;
+        function glideToTarget() {
+            if (!isForcing) return;
 
-            // Decay factor: 0.06 makes it feel very heavy and "expensive" like a high-end wheel
-            if (Math.abs(diff) > 0.5) {
-                window.scrollTo(0, currentY + diff * 0.06);
-                animationId = requestAnimationFrame(smoothForce);
+            const target = document.getElementById('target');
+            const targetY = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
+            const currentY = window.scrollY;
+            
+            // Distance remaining
+            const distance = targetY - currentY;
+
+            // Physics logic: move 8% of the distance per frame
+            const step = distance * 0.08;
+
+            if (Math.abs(distance) > 0.5) {
+                window.scrollTo(0, currentY + step);
+                animationId = requestAnimationFrame(glideToTarget);
             } else {
+                // ARRIVED: Hard lock and Kill engine
                 window.scrollTo(0, targetY);
-                isForcing = false; // Reset for next time
+                stopMagic();
             }
+        }
+
+        function stopMagic() {
+            isForcing = false;
+            isArmed = false;
+            cancelAnimationFrame(animationId);
+            console.log("Anchor Deactivated - User is free");
         }
     </script>
 </body>
