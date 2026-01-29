@@ -6,70 +6,104 @@
     <title>The Force</title>
     <style>
         body { 
-            margin: 0; background: #111; font-family: sans-serif; 
-            overflow-x: hidden; touch-action: pan-y;
-            /* Prevents the "stretchy" bounce on iPhones */
-            overscroll-behavior: none; 
+            margin: 0; background: #000; font-family: sans-serif; 
+            overflow: hidden; /* We handle scrolling manually for the trick */
+            height: 100vh; touch-action: none;
         }
-        .container { display: flex; flex-direction: column; }
+        #scroller {
+            position: absolute; width: 100%; will-change: transform;
+        }
         .box { 
-            width: 100vw; height: 25vh; /* Each box is 1/4 of the screen */
+            width: 100%; height: 200px; 
             display: flex; justify-content: center; align-items: center; 
-            color: white; font-size: 1.2rem; font-weight: bold;
-            border-bottom: 2px solid #000;
+            color: #444; font-size: 1.5rem; font-weight: bold;
+            border-bottom: 1px solid #111; background: #0a0a0a;
         }
         #target { background: #ff0000 !important; color: white !important; }
     </style>
 </head>
 <body>
 
-    <div id="list" class="container"></div>
+    <div id="scroller"></div>
 
     <script>
-        const list = document.getElementById('list');
+        const scroller = document.getElementById('scroller');
+        let currentY = 0;
         let isArmed = false;
         let holdTimer;
 
-        // 1. Solid Color List
-        const hexColors = ['#1a1a1a', '#222', '#1a1a1a', '#222'];
-        for (let i = 1; i <= 40; i++) {
+        // 1. Create 50 Solid Boxes
+        for (let i = 1; i <= 50; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === 25) { // The Force Target
+            if (i === 30) {
                 box.id = 'target';
                 box.innerText = "RED";
             } else {
-                box.style.background = hexColors[i % 2];
                 box.innerText = "Item " + i;
             }
-            list.appendChild(box);
+            scroller.appendChild(box);
         }
 
-        // 2. Secret Arming
+        // 2. Manual Touch Handling (This gives us total control)
+        let startY = 0;
         window.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].pageY;
+            
+            // Arming logic
             holdTimer = setTimeout(() => {
                 isArmed = true;
-                if (navigator.vibrate) navigator.vibrate(40);
-            }, 1000);
+                if (navigator.vibrate) navigator.vibrate(50);
+            }, 800);
         });
-        window.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        // 3. The Sudden Stop
+        window.addEventListener('touchmove', (e) => {
+            clearTimeout(holdTimer);
+            if (isArmed) return; // FREEZE: If armed, page won't move while finger is down
+
+            const delta = e.touches[0].pageY - startY;
+            currentY += delta;
+            startY = e.touches[0].pageY;
+            scroller.style.transform = `translateY(${currentY}px)`;
+        });
+
         window.addEventListener('touchend', () => {
-            if (!isArmed) return;
-
-            const target = document.getElementById('target');
-            // Calculate exact center
-            const targetY = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
-            
-            // This happens instantly. To the user, it looks like
-            // the scroll just 'died' exactly on the red box.
-            window.scrollTo(0, targetY);
-            
-            // 4. Kill the trick immediately so they can't trigger it twice
-            isArmed = false;
+            clearTimeout(holdTimer);
+            if (isArmed) {
+                forceToRed();
+                isArmed = false;
+            }
         });
 
+        function forceToRed() {
+            const target = document.getElementById('target');
+            const targetY = -(target.offsetTop - (window.innerHeight / 2) + 100);
+            
+            // High-Speed Manual Animation (No Blur)
+            const duration = 400; // ms
+            const startTime = performance.now();
+            const startPos = currentY;
+
+            function step(timestamp) {
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Fast-to-Stop Easing (Cubic Out)
+                const ease = 1 - Math.pow(1 - progress, 3);
+                
+                currentY = startPos + (targetY - startPos) * ease;
+                scroller.style.transform = `translateY(${currentY}px)`;
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    // STOP IMMEDIATELY
+                    currentY = targetY;
+                    scroller.style.transform = `translateY(${currentY}px)`;
+                }
+            }
+            requestAnimationFrame(step);
+        }
     </script>
 </body>
 </html>
