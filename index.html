@@ -3,63 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Scroll Force | Protocol</title>
+    <title>Scroll Force Protocol</title>
     <style>
-        :root { --accent: #007AFF; --bg: #0a0a0a; --card: #161616; }
-        body { background: var(--bg); color: #fff; font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        :root { --accent: #007AFF; --bg: #000; --card: #111; }
+        body { background: var(--bg); color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         
-        .container { text-align: center; width: 85%; max-width: 400px; padding: 40px; background: var(--card); border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); border: 1px solid #222; }
+        .glass-panel { 
+            text-align: center; width: 280px; padding: 40px; 
+            background: var(--card); border-radius: 40px; 
+            border: 1px solid #222; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+        }
         
-        h1 { font-weight: 300; letter-spacing: 2px; font-size: 1.4rem; margin-bottom: 30px; color: #eee; }
+        h1 { font-weight: 200; letter-spacing: 4px; font-size: 1.1rem; margin-bottom: 40px; color: #888; }
         
-        .input-group { margin-bottom: 30px; }
-        label { display: block; font-size: 0.7rem; text-transform: uppercase; color: #666; margin-bottom: 10px; letter-spacing: 1px; }
-        input { background: #000; border: 1px solid #333; color: var(--accent); font-size: 2rem; text-align: center; width: 80px; padding: 10px; border-radius: 12px; font-family: serif; }
-        input:focus { outline: none; border-color: var(--accent); }
+        .setup-zone { margin-bottom: 40px; }
+        label { display: block; font-size: 0.65rem; text-transform: uppercase; color: #444; margin-bottom: 15px; letter-spacing: 2px; }
+        
+        /* The number input - no default '4' unless you put it there */
+        input { 
+            background: transparent; border: none; border-bottom: 2px solid #333; 
+            color: var(--accent); font-size: 3.5rem; text-align: center; width: 120px; 
+            padding: 10px; font-weight: 200; transition: border-color 0.4s;
+        }
+        input:focus { outline: none; border-bottom-color: var(--accent); }
+        input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
-        .btn { background: var(--accent); color: white; padding: 18px 40px; border-radius: 50px; font-size: 1rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; width: 100%; box-shadow: 0 10px 20px rgba(0,122,255,0.2); }
-        .btn:active { transform: scale(0.96); opacity: 0.8; }
+        .btn { 
+            background: #fff; color: #000; padding: 20px; border-radius: 18px; 
+            font-size: 0.9rem; font-weight: 700; border: none; cursor: pointer; 
+            width: 100%; letter-spacing: 1px;
+        }
+        .btn:active { transform: scale(0.97); background: var(--accent); color: #fff; }
         
-        #status { margin-top: 20px; font-size: 0.8rem; color: #444; height: 1em; }
+        #confirm { margin-top: 25px; font-size: 0.7rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; opacity: 0; transition: 0.3s; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div class="glass-panel">
         <h1>SCROLL FORCE</h1>
         
-        <div class="input-group">
-            <label>Activation Swipes</label>
-            <input type="number" id="swipeLimit" value="4" min="1" max="99">
+        <div class="setup-zone">
+            <label>SWIPE TRIGGER COUNT</label>
+            <input type="number" id="swipeLimit" placeholder="0">
         </div>
 
-        <button class="btn" onclick="initializeProtocol()">INITIALIZE PROTOCOL</button>
-        <div id="status"></div>
+        <button class="btn" onclick="engage()">ENGAGE PROTOCOL</button>
+        <div id="confirm">System Armed</div>
     </div>
 
     <script>
-        // Memory Feature: Load previously saved number
         const inputField = document.getElementById('swipeLimit');
-        const savedLimit = localStorage.getItem('sf-limit');
-        if (savedLimit) {
-            inputField.value = savedLimit;
+        const confirmMsg = document.getElementById('confirm');
+
+        // MEMORY LOAD: Strictly loads whatever you last used
+        const memory = localStorage.getItem('sf-custom-limit');
+        if (memory) {
+            inputField.value = memory;
         }
 
-        function initializeProtocol() {
-            const limit = inputField.value;
-            const status = document.getElementById('status');
+        function engage() {
+            const val = inputField.value || 4; // Failsafe to 4 if you leave it empty
+            localStorage.setItem('sf-custom-limit', val);
             
-            // Save to memory
-            localStorage.setItem('sf-limit', limit);
-            
-            // Generate Payload with the custom swipe limit
-            const magicCode = `javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>{tC=0},300);if(tC>=2){location.reload();return;}fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.remove();loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=${limit}&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none'}}requestAnimationFrame(anim)}})();`;
+            // THE PAYLOAD: Uses the live 'val' from your input
+            const payload = `javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>{tC=0},300);if(tC>=2){location.reload();return;}fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.remove();loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=${val}&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none'}}requestAnimationFrame(anim)}})();`;
 
-            navigator.clipboard.writeText(magicCode).then(() => {
-                status.innerText = "Protocol Copied. Redirecting...";
+            navigator.clipboard.writeText(payload).then(() => {
+                confirmMsg.style.opacity = "1";
                 setTimeout(() => {
                     window.location.href = "https://www.google.com/imghp";
-                }, 1000);
+                }, 800);
             });
         }
     </script>
