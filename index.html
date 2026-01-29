@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Universal Browser</title>
+    <title>Universal Browser Pro</title>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         
@@ -14,25 +14,25 @@
         }
 
         #site-wrapper {
-            width: 100%; height: 10000px; /* Force height for Wiki */
+            width: 100%; height: 12000px; 
             border: none; display: block;
         }
 
-        /* Invisible Button in Top Left (40x40px) */
+        /* Secret Trigger in Top Left */
         #arm-trigger {
             position: fixed;
             top: 0; left: 0;
-            width: 50px; height: 50px;
-            z-index: 10000;
+            width: 60px; height: 60px;
+            z-index: 10001;
             background: transparent;
         }
 
-        /* Invisible Interceptor - active only when armed */
+        /* Magic Interceptor with Inertia */
         #magic-interceptor {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            z-index: 9999;
+            z-index: 10000;
             display: none;
             touch-action: none;
         }
@@ -56,55 +56,83 @@
         let forcedY = null;
         let swipeCount = 0;
         let isMagicRunning = false;
+        
+        // Inertia Variables
+        let velocity = 0;
+        let lastY = 0;
+        let isDragging = false;
+        let animationFrame;
 
-        // 1. SECRET ARMING (Tap Top-Left Corner)
+        // 1. SECRET ARMING (Tap Top-Left)
         trigger.addEventListener('click', () => {
             forcedY = container.scrollTop;
             if (navigator.vibrate) navigator.vibrate([40, 40]);
-            
-            // Activate the trap
             interceptor.style.display = 'block';
-            console.log("Anchor Set at: " + forcedY);
+            startInertiaLoop(); // Start custom engine
         });
 
-        // 2. INTERCEPTOR LOGIC (Spectator's Swipes)
-        let startY = 0;
-        let scrollStart = 0;
+        // 2. INERTIA ENGINE
+        function startInertiaLoop() {
+            if (isDragging || isMagicRunning) {
+                requestAnimationFrame(startInertiaLoop);
+                return;
+            }
 
+            if (Math.abs(velocity) > 0.1) {
+                container.scrollTop += velocity;
+                velocity *= 0.95; // Friction
+                requestAnimationFrame(startInertiaLoop);
+            } else {
+                velocity = 0;
+                requestAnimationFrame(startInertiaLoop);
+            }
+        }
+
+        // 3. INTERCEPTOR TOUCH LOGIC
         interceptor.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-            scrollStart = container.scrollTop;
+            if (isMagicRunning) return;
+            isDragging = true;
+            velocity = 0;
+            lastY = e.touches[0].clientY;
         });
 
         interceptor.addEventListener('touchmove', (e) => {
             if (isMagicRunning) return;
-            const delta = startY - e.touches[0].clientY;
-            container.scrollTop = scrollStart + delta;
+            const currentY = e.touches[0].clientY;
+            const delta = lastY - currentY;
+            
+            container.scrollTop += delta;
+            velocity = delta; // Capture speed for inertia
+            lastY = currentY;
         });
 
         interceptor.addEventListener('touchend', () => {
             if (isMagicRunning) return;
+            isDragging = false;
             
             swipeCount++;
 
-            // On the 2nd flick release
-            if (swipeCount >= 2 && forcedY !== null) {
+            // TRIGGER: Only after 4 release cycles
+            if (swipeCount >= 4 && forcedY !== null) {
                 executeForce();
             }
         });
 
+        // 4. THE MAGIC GLIDE
         function executeForce() {
             isMagicRunning = true;
+            velocity = 0; // Kill inertia
+            
             const start = container.scrollTop;
             const distance = forcedY - start;
-            const duration = 1800;
+            const duration = 2000;
             let startTime = null;
 
             function animate(timestamp) {
                 if (!startTime) startTime = timestamp;
                 const progress = Math.min((timestamp - startTime) / duration, 1);
                 
-                // Exponential Ease Out
+                // Super smooth quintic ease-out
                 const ease = 1 - Math.pow(1 - progress, 5);
                 
                 container.scrollTop = start + (distance * ease);
@@ -112,7 +140,7 @@
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    // RESET
+                    // RESET TRICK
                     isMagicRunning = false;
                     swipeCount = 0;
                     forcedY = null;
