@@ -3,110 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magic Force</title>
+    <title>The Force</title>
     <style>
         body { 
-            margin: 0; 
-            background: #000; 
-            font-family: sans-serif; 
-            overflow-x: hidden; 
-            touch-action: pan-y;
-            -webkit-overflow-scrolling: touch;
+            margin: 0; background: #111; font-family: sans-serif; 
+            overflow-x: hidden; touch-action: pan-y;
+            /* Prevents the "stretchy" bounce on iPhones */
+            overscroll-behavior: none; 
         }
-        .container { display: flex; flex-direction: column; gap: 0; padding: 100vh 0; }
+        .container { display: flex; flex-direction: column; }
         .box { 
-            width: 100vw; height: 200px; 
+            width: 100vw; height: 25vh; /* Each box is 1/4 of the screen */
             display: flex; justify-content: center; align-items: center; 
-            color: white; font-size: 1.5rem; font-weight: bold;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: white; font-size: 1.2rem; font-weight: bold;
+            border-bottom: 2px solid #000;
         }
-        #target { 
-            background: #ff0000 !important; 
-            height: 250px;
-            z-index: 10;
-        }
+        #target { background: #ff0000 !important; color: white !important; }
     </style>
 </head>
 <body>
 
-    <div class="container" id="list"></div>
+    <div id="list" class="container"></div>
 
     <script>
         const list = document.getElementById('list');
         let isArmed = false;
-        let isForcing = false;
-        let animationId;
         let holdTimer;
 
-        // 1. Build list with solid colors (No gradients)
-        const colors = ['#2c3e50', '#2980b9', '#8e44ad', '#27ae60', '#f39c12', '#d35400', '#c0392b', '#16a085', '#2c3e50', '#7f8c8d'];
-        for (let i = 1; i <= 25; i++) {
+        // 1. Solid Color List
+        const hexColors = ['#1a1a1a', '#222', '#1a1a1a', '#222'];
+        for (let i = 1; i <= 40; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === 15) {
+            if (i === 25) { // The Force Target
                 box.id = 'target';
-                box.innerText = "THE CHOICE";
+                box.innerText = "RED";
             } else {
-                box.style.background = colors[i % colors.length];
-                box.innerText = "Color " + i;
+                box.style.background = hexColors[i % 2];
+                box.innerText = "Item " + i;
             }
             list.appendChild(box);
         }
 
         // 2. Secret Arming
-        window.addEventListener('touchstart', () => {
-            if (isForcing) return;
+        window.addEventListener('touchstart', (e) => {
             holdTimer = setTimeout(() => {
                 isArmed = true;
-                if (navigator.vibrate) navigator.vibrate(50);
+                if (navigator.vibrate) navigator.vibrate(40);
             }, 1000);
         });
         window.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        // 3. Trigger on User Scroll
-        window.addEventListener('scroll', () => {
-            if (isArmed) {
-                isArmed = false; 
-                isForcing = true; 
-            }
-        });
-
-        // 4. Smooth Anchor Inertia
+        // 3. The Sudden Stop
         window.addEventListener('touchend', () => {
-            if (isForcing) {
-                requestAnimationFrame(glideToTarget);
-            }
-        });
-
-        function glideToTarget() {
-            if (!isForcing) return;
+            if (!isArmed) return;
 
             const target = document.getElementById('target');
+            // Calculate exact center
             const targetY = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
-            const currentY = window.scrollY;
             
-            // Distance remaining
-            const distance = targetY - currentY;
-
-            // Physics logic: move 8% of the distance per frame
-            const step = distance * 0.08;
-
-            if (Math.abs(distance) > 0.5) {
-                window.scrollTo(0, currentY + step);
-                animationId = requestAnimationFrame(glideToTarget);
-            } else {
-                // ARRIVED: Hard lock and Kill engine
-                window.scrollTo(0, targetY);
-                stopMagic();
-            }
-        }
-
-        function stopMagic() {
-            isForcing = false;
+            // This happens instantly. To the user, it looks like
+            // the scroll just 'died' exactly on the red box.
+            window.scrollTo(0, targetY);
+            
+            // 4. Kill the trick immediately so they can't trigger it twice
             isArmed = false;
-            cancelAnimationFrame(animationId);
-            console.log("Anchor Deactivated - User is free");
-        }
+        });
+
     </script>
 </body>
 </html>
