@@ -22,8 +22,8 @@
     <div class="glass-panel">
         <h1>SCROLL FORCE</h1>
         <div class="setup-zone">
-            <label>SWIPE TRIGGER COUNT</label>
-            <input type="number" id="swipeLimit" placeholder="0">
+            <label>ACTIVATE ON SWIPE #</label>
+            <input type="number" id="swipeLimit" placeholder="X">
         </div>
         <button class="btn" onclick="engage()">ENGAGE PROTOCOL</button>
         <div id="confirm">System Armed</div>
@@ -32,19 +32,24 @@
     <script>
         const inputField = document.getElementById('swipeLimit');
         const confirmMsg = document.getElementById('confirm');
+        
+        // Load previous preference
         const memory = localStorage.getItem('sf-custom-limit');
         if (memory) { inputField.value = memory; }
 
         function engage() {
-            const val = inputField.value || 4;
-            localStorage.setItem('sf-custom-limit', val);
+            // Take the EXACT value from the input
+            const xVal = inputField.value; 
+            if(!xVal) { alert("Please enter a swipe count (X)"); return; }
             
-            // THE PAYLOAD: Removed Time-Based Animation, Added Proportional Landing Physics
-            const payload = `javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);function arm(){t.style.display='block';if(!t.parentNode)document.body.appendChild(t);i.style.display='none';sC=0;fY=null;mR=false;}t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>{tC=0},300);if(tC>=2){location.reload();return;}fY=window.scrollY;if(navigator.vibrate)setTimeout(()=>navigator.vibrate([40,40]),500);i.style.display='block';t.style.display='none';loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=${val}&&fY!==null)force()};function force(){mR=true;function step(){let curS=window.scrollY;let dist=fY-curS;if(Math.abs(dist)<0.5){window.scrollTo(0,fY);arm();return;}let pV=dist*0.12;let limitV=Math.abs(v);let finalV=Math.sign(pV)*Math.min(Math.abs(pV),limitV);if(Math.abs(finalV)<1)finalV=Math.sign(dist)*1.5;window.scrollBy(0,finalV);requestAnimationFrame(step);}step();}})();`;
+            localStorage.setItem('sf-custom-limit', xVal);
+            
+            const payload = `javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0,tC=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);function arm(){t.style.display='block';if(!t.parentNode)document.body.appendChild(t);i.style.display='none';sC=0;fY=null;mR=false;}t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();tC++;setTimeout(()=>{tC=0},300);if(tC>=2){location.reload();return;}fY=window.scrollY;if(navigator.vibrate)setTimeout(()=>navigator.vibrate([40,40]),500);i.style.display='block';t.style.display='none';loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=${xVal}&&fY!==null)force()};function force(){mR=true;let pageH=document.documentElement.scrollHeight;let factor=Math.max(0.05, Math.min(0.2, 350/pageH));function step(){let curS=window.scrollY;let dist=fY-curS;if(Math.abs(dist)<0.5){window.scrollTo(0,fY);arm();return;}let pV=dist*factor;let limitV=Math.abs(v);let finalV=Math.sign(pV)*Math.min(Math.abs(pV),limitV);if(Math.abs(finalV)<1.5)finalV=Math.sign(dist)*2;window.scrollBy(0,finalV);requestAnimationFrame(step);}step();}})();`;
 
             navigator.clipboard.writeText(payload).then(() => {
                 confirmMsg.style.opacity = "1";
                 setTimeout(() => {
+                    // Using .replace() to keep your history clean
                     window.location.replace("https://www.google.com/");
                 }, 800);
             });
