@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Color Stream</title>
+    <title>Inertia Force</title>
     <style>
-        body { margin: 0; background: #111; font-family: sans-serif; overflow-x: hidden; touch-action: pan-y; }
-        .container { display: flex; flex-direction: column; gap: 10px; padding: 50vh 0; }
+        body { margin: 0; background: #000; font-family: sans-serif; overflow-x: hidden; }
+        .container { display: flex; flex-direction: column; gap: 10px; padding: 100vh 0; }
         .box { 
             width: 100vw; height: 180px; 
             display: flex; justify-content: center; align-items: center; 
-            color: rgba(255,255,255,0.3); font-weight: bold; font-size: 2rem;
+            color: rgba(255,255,255,0.2); font-size: 2rem; font-weight: bold;
         }
-        #target { background: #ff4757 !important; color: white !important; box-shadow: inset 0 0 50px rgba(0,0,0,0.2); }
+        #target { background: #ff4757 !important; color: white !important; }
     </style>
 </head>
 <body>
@@ -23,49 +23,58 @@
         const list = document.getElementById('list');
         let isArmed = false;
         let holdTimer;
+        let animationId;
 
-        // Generate 20 boxes
+        // 1. Setup 20 Boxes
         for (let i = 1; i <= 20; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === 14) {
+            if (i === 12) {
                 box.id = 'target';
                 box.innerText = "RED";
             } else {
-                box.style.background = `hsl(${i * 25}, 40%, 30%)`;
+                box.style.background = `hsl(${i * 18}, 40%, 20%)`;
                 box.innerText = i;
             }
             list.appendChild(box);
         }
 
-        // Secret Arming (Hold anywhere for 1s)
+        // 2. Secret Arming (Long Press)
         window.addEventListener('touchstart', () => {
             holdTimer = setTimeout(() => {
                 isArmed = true;
-                if (navigator.vibrate) navigator.vibrate(60); 
+                if (navigator.vibrate) navigator.vibrate(40);
             }, 1000);
         });
         window.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-        // The Momentum Hijack
-        window.addEventListener('scroll', () => {
+        // 3. The "Smooth Gravity" Physics
+        window.addEventListener('touchend', () => {
             if (!isArmed) return;
-
-            // Once the user starts a "real" scroll while armed...
-            isArmed = false; // Trigger once
             
-            const target = document.getElementById('target');
-            const targetPos = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
-
-            // We use a slight delay to let their initial "flick" start,
-            // then we smoothly override the momentum to the target.
-            setTimeout(() => {
-                window.scrollTo({
-                    top: targetPos,
-                    behavior: 'smooth'
-                });
-            }, 50); 
+            // Start the custom physics loop
+            cancelAnimationFrame(animationId);
+            animateToTarget();
+            isArmed = false; // Reset trick so it only happens once
         });
+
+        function animateToTarget() {
+            const target = document.getElementById('target');
+            const targetY = target.offsetTop - (window.innerHeight / 2) + (target.offsetHeight / 2);
+            
+            const currentY = window.scrollY;
+            const diff = targetY - currentY;
+            
+            // This is the "Spring" physics formula:
+            // We move a percentage (0.07) of the remaining distance every frame.
+            // This creates a perfectly smooth deceleration.
+            if (Math.abs(diff) > 0.5) {
+                window.scrollTo(0, currentY + diff * 0.07);
+                animationId = requestAnimationFrame(animateToTarget);
+            } else {
+                window.scrollTo(0, targetY); // Hard lock at the final pixel
+            }
+        }
     </script>
 </body>
 </html>
