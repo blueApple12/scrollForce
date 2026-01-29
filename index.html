@@ -3,120 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Web Force</title>
+    <title>Web Browser</title>
     <style>
-        body, html { 
-            margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; 
-            /* Disables the magnifying glass and copy/paste popups */
-            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-        }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         
-        #scroll-container {
-            width: 100%; height: 100%;
-            overflow-y: scroll; -webkit-overflow-scrolling: touch;
+        /* The container that holds the frame */
+        #viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
         }
 
         #site-wrapper {
-            width: 100%; height: 10000px; /* High height to ensure it fills the scroll */
-            border: none; display: block;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 12000px; /* High enough for most Wiki pages */
+            border: none;
+            will-change: transform;
         }
 
-        /* This layer captures the 2 magic swipes */
-        #magic-overlay {
-            position: fixed; top: 0; left: 0;
+        /* The transparent interceptor */
+        #touch-layer {
+            position: fixed;
+            top: 0; left: 0;
             width: 100%; height: 100%;
-            z-index: 1000; display: none;
-            background: rgba(0,0,0,0); /* Invisible but present */
+            z-index: 999;
+            touch-action: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="scroll-container">
-        <iframe id="site-wrapper" src="https://www.wikipedia.org"></iframe>
+    <div id="viewport">
+        <iframe id="site-wrapper" src="https://en.m.wikipedia.org"></iframe>
+        <div id="touch-layer"></div>
     </div>
-    
-    <div id="magic-overlay"></div>
 
     <script>
-        const container = document.getElementById('scroll-container');
-        const overlay = document.getElementById('magic-overlay');
+        const wrapper = document.getElementById('site-wrapper');
+        const touchLayer = document.getElementById('touch-layer');
+        
+        let currentY = 0;
+        let velocity = 0;
+        let isDragging = false;
+        let lastY = 0;
         
         let forcedY = null;
         let holdTimer;
         let swipeCount = 0;
-        let isArmed = false;
+        let isMagicActive = false;
+        let moved = false;
 
-        // Disable long-press context menus site-wide
-        window.oncontextmenu = function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            return false;
-        };
+        // 1. PHYSICS LOOP (With Strict Boundaries)
+        function update() {
+            if (!isDragging && !isMagicActive) {
+                currentY += velocity;
+                velocity *= 0.95;
 
-        // 1. ARMING LOGIC
-        container.addEventListener('touchstart', (e) => {
-            if (isArmed) return;
-
-            holdTimer = setTimeout(() => {
-                forcedY = container.scrollTop;
-                isArmed = true;
-                if (navigator.vibrate) navigator.vibrate([60, 40]);
+                // FIX: Stop at the very top
+                if (currentY > 0) {
+                    currentY = 0;
+                    velocity = 0;
+                }
                 
-                // Activate overlay to hijack the next two flings
-                overlay.style.display = 'block';
-            }, 1000); 
-        }, {passive: false});
+                // FIX: Stop at bottom (Approx 8000px for Wiki main page)
+                const limit = -8000; 
+                if (currentY < limit) {
+                    currentY = limit;
+                    velocity = 0;
+                }
 
-        container.addEventListener('touchmove', () => clearTimeout(holdTimer));
-        container.addEventListener('touchend', () => clearTimeout(holdTimer));
+                render();
+            }
+            requestAnimationFrame(update);
+        }
+        update();
 
-        // 2. THE OVERLAY (Handles the 2-swipe count)
-        let startY, initialScroll;
+        function render() {
+            wrapper.style.transform = `translateY(${currentY}px)`;
+        }
 
-        overlay.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-            initialScroll = container.scrollTop;
+        // 2. TOUCH LOGIC
+        touchLayer.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            moved = false;
+            velocity = 0;
+            lastY = e.touches[0].clientY;
+
+            // Start Hold Timer
+            holdTimer = setTimeout(() => {
+                if (!moved) {
+                    forcedY = currentY;
+                    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+                    swipeCount = 0; 
+                    console.log("Anchor Set at: " + forcedY);
+                }
+            }, 1000);
         });
 
-        overlay.addEventListener('touchmove', (e) => {
-            const delta = startY - e.touches[0].clientY;
-            container.scrollTop = initialScroll + delta;
-        });
+        touchLayer.addEventListener('touchmove', (e) => {
+            const nowY = e.touches[0].clientY;
+            const delta = nowY - lastY;
+            lastY = nowY;
 
-        overlay.addEventListener('touchend', () => {
-            swipeCount++;
-            
-            // Only trigger on the release of the SECOND swipe
-            if (swipeCount >= 2 && forcedY !== null) {
-                executeMagicScroll(forcedY);
+            if (Math.abs(delta) > 3) {
+                moved = true;
+                clearTimeout(holdTimer);
+            }
+
+            if (!isMagicActive) {
+                currentY += delta;
+                velocity = delta;
+                render();
             }
         });
 
-        function executeMagicScroll(target) {
-            const start = container.scrollTop;
-            const change = target - start;
-            const duration = 1600;
-            let startTime = null;
+        touchLayer.addEventListener('touchend', () => {
+            isDragging = false;
+            clearTimeout(holdTimer);
 
-            function animate(currentTime) {
-                if (!startTime) startTime = currentTime;
-                const timeElapsed = currentTime - startTime;
-                const progress = Math.min(timeElapsed / duration, 1);
+            if (forcedY !== null && moved) {
+                swipeCount++;
+                if (swipeCount >= 2) {
+                    startForceGlide();
+                }
+            }
+        });
+
+        // 3. THE FORCE GLIDE
+        function startForceGlide() {
+            isMagicActive = true;
+            const startPos = currentY;
+            const distance = forcedY - startPos;
+            const duration = 1800;
+            const startTime = performance.now();
+
+            function animate(time) {
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
                 
-                // Smooth glide easing
+                // Quintic Easing (Fast flick to slow stop)
                 const ease = 1 - Math.pow(1 - progress, 5);
                 
-                container.scrollTop = start + change * ease;
+                currentY = startPos + (distance * ease);
+                render();
 
-                if (timeElapsed < duration) {
+                if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    // RESET EVERYTHING
-                    isArmed = false;
-                    swipeCount = 0;
+                    isMagicActive = false;
                     forcedY = null;
-                    overlay.style.display = 'none';
+                    swipeCount = 0;
                 }
             }
             requestAnimationFrame(animate);
