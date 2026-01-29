@@ -5,28 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Optimizer</title>
     <style>
-        body { background: #111; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .btn { background: #4285f4; color: white; padding: 20px 40px; border-radius: 30px; font-size: 1.2rem; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .btn:active { transform: scale(0.98); background: #3367d6; }
+        body { background: #000; color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .btn { background: #4285f4; color: white; padding: 22px 45px; border-radius: 50px; font-size: 1.1rem; font-weight: 600; border: none; cursor: pointer; transition: 0.3s; }
+        .btn:active { background: #3367d6; transform: scale(0.95); }
+        #loader { display: none; margin-top: 20px; color: #888; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <button class="btn" onclick="copyAndGo()">Optimize & Open Google</button>
+    <button class="btn" id="mainBtn" onclick="run()">Start Optimization</button>
+    <div id="loader">Injecting Protocols...</div>
 
     <script>
-        function copyAndGo() {
-            // This is the condensed "Magic Script"
-            const magicCode = "javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'70px',height:'70px',zIndex:2147483647});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);t.onclick=()=>{fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.remove();loop();};function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=4&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none'}}requestAnimationFrame(anim)}})();";
+        function run() {
+            const btn = document.getElementById('mainBtn');
+            const loader = document.getElementById('loader');
+            btn.style.display = 'none';
+            loader.style.display = 'block';
 
-            // Copy to Clipboard
+            // PASTE THE NEW COMPRESSED SCRIPT BELOW
+            const magicCode = "javascript:(function(){let fY=null,sC=0,mR=false,v=0,d=false,lY=0,lT=0;const t=document.createElement('div');Object.assign(t.style,{position:'fixed',top:0,left:0,width:'100px',height:'100px',zIndex:2147483647,background:'transparent'});document.body.appendChild(t);const i=document.createElement('div');Object.assign(i.style,{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:2147483646,display:'none',touchAction:'none'});document.body.appendChild(i);t.addEventListener('touchstart',function(e){e.preventDefault();e.stopPropagation();fY=window.scrollY;setTimeout(()=>{if(navigator.vibrate)navigator.vibrate([40,40]);},500);i.style.display='block';t.remove();loop();},{passive:false});function loop(){if(!mR){if(!d&&Math.abs(v)>0.1){window.scrollBy(0,v);v*=0.975}requestAnimationFrame(loop)}}i.ontouchstart=(e)=>{if(mR)return;d=true;v=0;lY=e.touches[0].clientY;lT=Date.now()};i.ontouchmove=(e)=>{if(mR)return;let cY=e.touches[0].clientY,cT=Date.now(),dY=lY-cY,dT=cT-lT;window.scrollBy(0,dY);if(dT>0)v=(dY/dT)*16;lY=cY;lT=cT};i.ontouchend=()=>{if(mR)return;d=false;sC++;if(sC>=4&&fY!==null)force()};function force(){mR=true;let s=window.scrollY,dist=fY-s,dur=2400,start=null;function anim(ts){if(!start)start=ts;let p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,5);window.scrollTo(0,s+(dist*e));if(p<1)requestAnimationFrame(anim);else{mR=false;sC=0;fY=null;i.style.display='none'}}requestAnimationFrame(anim)}})();";
+
             navigator.clipboard.writeText(magicCode).then(() => {
-                // Redirect to Google Images after a tiny delay
                 setTimeout(() => {
                     window.location.href = "https://www.google.com/imghp";
-                }, 100);
-            }).catch(err => {
-                alert("Please allow clipboard access");
+                }, 800);
             });
         }
     </script>
