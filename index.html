@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Force</title>
+    <title>Inertia Master</title>
     <style>
         body { 
             margin: 0; background: #000; font-family: sans-serif; 
-            overflow: hidden; /* We handle scrolling manually for the trick */
-            height: 100vh; touch-action: none;
+            overflow: hidden; height: 100vh; touch-action: none;
         }
         #scroller {
-            position: absolute; width: 100%; will-change: transform;
+            position: absolute; width: 100%; top: 0; left: 0;
+            will-change: transform; /* Fixes the 'gradient/transparent' blur issue */
         }
         .box { 
             width: 100%; height: 200px; 
             display: flex; justify-content: center; align-items: center; 
-            color: #444; font-size: 1.5rem; font-weight: bold;
-            border-bottom: 1px solid #111; background: #0a0a0a;
+            color: #555; font-size: 1.5rem; font-weight: bold;
+            border-bottom: 2px solid #111; background: #0a0a0a;
         }
         #target { background: #ff0000 !important; color: white !important; }
     </style>
@@ -29,81 +29,84 @@
     <script>
         const scroller = document.getElementById('scroller');
         let currentY = 0;
+        let velocity = 0;
         let isArmed = false;
+        let isTouching = false;
+        let lastTouchY = 0;
         let holdTimer;
+        let animLoop;
 
-        // 1. Create 50 Solid Boxes
+        // 1. Setup 50 Solid Boxes
         for (let i = 1; i <= 50; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            if (i === 30) {
-                box.id = 'target';
-                box.innerText = "RED";
-            } else {
-                box.innerText = "Item " + i;
-            }
+            if (i === 30) { box.id = 'target'; box.innerText = "RED"; }
+            else { box.innerText = "Item " + i; }
             scroller.appendChild(box);
         }
 
-        // 2. Manual Touch Handling (This gives us total control)
-        let startY = 0;
+        // 2. Physics Engine (Inertia)
+        function update() {
+            if (!isTouching) {
+                if (isArmed) {
+                    // MAGIC MODE: Force glide to Red
+                    const target = document.getElementById('target');
+                    const targetY = -(target.offsetTop - (window.innerHeight / 2) + 100);
+                    const dist = targetY - currentY;
+                    
+                    currentY += dist * 0.08; // Smooth magnetic pull
+                    if (Math.abs(dist) < 0.1) {
+                        currentY = targetY;
+                        isArmed = false; // Reset trick
+                    }
+                } else {
+                    // NORMAL MODE: Natural friction
+                    currentY += velocity;
+                    velocity *= 0.95; // Friction
+                }
+                render();
+            }
+            animLoop = requestAnimationFrame(update);
+        }
+
+        function render() {
+            scroller.style.transform = `translateY(${currentY}px)`;
+        }
+
+        // 3. Touch Controls
         window.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].pageY;
-            
-            // Arming logic
+            isTouching = true;
+            velocity = 0; // Stop previous inertia
+            lastTouchY = e.touches[0].pageY;
+
             holdTimer = setTimeout(() => {
                 isArmed = true;
-                if (navigator.vibrate) navigator.vibrate(50);
-            }, 800);
+                if (navigator.vibrate) navigator.vibrate(60);
+            }, 1000);
         });
 
         window.addEventListener('touchmove', (e) => {
+            if (isArmed) {
+                // While armed, the finger "slips" - no movement allowed
+                return;
+            }
             clearTimeout(holdTimer);
-            if (isArmed) return; // FREEZE: If armed, page won't move while finger is down
-
-            const delta = e.touches[0].pageY - startY;
+            const moveY = e.touches[0].pageY;
+            const delta = moveY - lastTouchY;
+            
+            velocity = delta; // Build velocity for inertia
             currentY += delta;
-            startY = e.touches[0].pageY;
-            scroller.style.transform = `translateY(${currentY}px)`;
+            lastTouchY = moveY;
+            render();
         });
 
         window.addEventListener('touchend', () => {
+            isTouching = false;
             clearTimeout(holdTimer);
-            if (isArmed) {
-                forceToRed();
-                isArmed = false;
-            }
         });
 
-        function forceToRed() {
-            const target = document.getElementById('target');
-            const targetY = -(target.offsetTop - (window.innerHeight / 2) + 100);
-            
-            // High-Speed Manual Animation (No Blur)
-            const duration = 400; // ms
-            const startTime = performance.now();
-            const startPos = currentY;
-
-            function step(timestamp) {
-                const elapsed = timestamp - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                // Fast-to-Stop Easing (Cubic Out)
-                const ease = 1 - Math.pow(1 - progress, 3);
-                
-                currentY = startPos + (targetY - startPos) * ease;
-                scroller.style.transform = `translateY(${currentY}px)`;
-
-                if (progress < 1) {
-                    requestAnimationFrame(step);
-                } else {
-                    // STOP IMMEDIATELY
-                    currentY = targetY;
-                    scroller.style.transform = `translateY(${currentY}px)`;
-                }
-            }
-            requestAnimationFrame(step);
-        }
+        // Start the loop
+        update();
     </script>
 </body>
 </html>
