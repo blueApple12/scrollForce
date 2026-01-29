@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Elastic Scroll</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: #121212;
+            height: 5000px; /* Long page for scrolling */
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 50vh; /* Spacing boxes out */
+            padding: 100vh 0;
+        }
+
+        .box {
+            width: 80vw;
+            height: 300px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        #target { background: #ff4757; box-shadow: 0 0 30px rgba(255, 71, 87, 0.5); }
+        .blue   { background: #1e90ff; }
+        .green  { background: #2ed573; }
+        .orange { background: #ffa502; }
+        .purple { background: #a4b0be; }
+
+        #hud {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 15px 25px;
+            border-radius: 50px;
+            color: cyan;
+            border: 1px solid cyan;
+            pointer-events: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        Force: <span id="force">0</span><br>
+        <small>Scroll away to feel the snap!</small>
+    </div>
+
+    <div class="container">
+        <div class="box blue">Blue Box</div>
+        <div class="box green">Green Box</div>
+        <div id="target" class="box">MAGIC RED (The Anchor)</div>
+        <div class="box orange">Orange Box</div>
+        <div class="box purple">Grey Box</div>
+    </div>
+
+    <script>
+        const target = document.getElementById('target');
+        const forceDisplay = document.getElementById('force');
+        let isSnapping = false;
+        let scrollTimeout;
+
+        // 1. Find where the Red Box is on the page
+        const anchorY = target.offsetTop + (target.offsetHeight / 2) - (window.innerHeight / 2);
+
+        window.addEventListener('scroll', () => {
+            if (isSnapping) return;
+
+            // 2. Calculate "Force" (Distance from Red Box)
+            const currentScroll = window.scrollY;
+            const distance = Math.abs(currentScroll - anchorY);
+            
+            // Update the UI
+            forceDisplay.innerText = Math.floor(distance);
+
+            // 3. The "Magic" Automatic Snap
+            // This detects when the user STOPS scrolling
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                snapBack();
+            }, 150); // 150ms after scroll stops
+        });
+
+        function snapBack() {
+            isSnapping = true;
+            
+            // 4. Forceful Smooth Scroll back to the Red Box
+            window.scrollTo({
+                top: anchorY,
+                behavior: 'smooth'
+            });
+
+            // Reset snapping flag after animation
+            setTimeout(() => { isSnapping = false; }, 800);
+        }
+
+        // Initialize at the Red Box on load
+        window.scrollTo(0, anchorY);
+    </script>
+</body>
+</html>
