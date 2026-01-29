@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Color Picker</title>
+    <title>Spectrum</title>
     <style>
         body { 
-            margin: 0; background: #000; font-family: sans-serif; 
+            margin: 0; background: #000; font-family: 'Segoe UI', sans-serif; 
             overflow: hidden; height: 100vh; touch-action: none;
         }
         #stage {
@@ -16,8 +16,14 @@
         .box { 
             width: 100%; height: 200px; 
             display: flex; justify-content: center; align-items: center; 
-            color: rgba(255,255,255,0.2); font-size: 1.2rem; font-weight: bold;
-            border-bottom: 1px solid rgba(0,0,0,0.2);
+            color: white; font-size: 1.4rem; font-weight: 300;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        /* Specific styling for the Red Force */
+        #secret-target {
+            font-weight: 800;
+            font-size: 2rem;
         }
     </style>
 </head>
@@ -27,37 +33,46 @@
 
     <script>
         const stage = document.getElementById('stage');
-        const BOX_COUNT = 50;
-        const FORCED_INDEX = 25; // This is your secret target
+        const BOX_COUNT = 60;
+        const FORCED_INDEX = 25; 
         
-        let currentY = -2000; // Start in the middle
+        let currentY = -2500; 
         let velocity = 0;
         let isDragging = false;
         let lastTouchY = 0;
         let animationFrame;
         
-        // Trick Logic
         let isArmed = false; 
         let holdTimer;
 
-        // 1. Generate Random Colors
-        for (let i = 1; i <= BOX_COUNT; i++) {
+        // 1. Generate Constant Gradient Colors
+        for (let i = 0; i < BOX_COUNT; i++) {
             const box = document.createElement('div');
             box.className = 'box';
-            box.style.background = `hsl(${Math.random() * 360}, 60%, 45%)`;
-            if (i === FORCED_INDEX) box.id = "secret-target";
-            box.innerText = "Color " + i;
+            
+            // Forces Box 25 to be Pure Red, others follow a smooth spectrum
+            let hue;
+            if (i === FORCED_INDEX) {
+                hue = 0; // Pure Red
+                box.id = "secret-target";
+                box.innerText = "RED";
+            } else {
+                hue = (i * 13) % 360; 
+                box.innerText = "Color " + (i + 1);
+            }
+            
+            box.style.background = `hsl(${hue}, 70%, 45%)`;
             stage.appendChild(box);
         }
 
         function update() {
             if (!isDragging) {
                 currentY += velocity;
-                velocity *= 0.95;
+                velocity *= 0.95; // Natural Friction
                 
-                // Boundaries
+                // Keep within bounds
                 const maxScroll = -((BOX_COUNT * 200) - window.innerHeight);
-                if (currentY > 0) { currentY *= 0.8; velocity = 0; }
+                if (currentY > 0) { currentY *= 0.5; velocity = 0; }
                 if (currentY < maxScroll) { currentY = maxScroll; velocity = 0; }
                 
                 render();
@@ -75,16 +90,16 @@
             velocity = 0;
             lastTouchY = e.touches[0].clientY;
             
-            // ARMING: Only works if finger is STILL. 
-            // If they move, the timer clears.
-            holdTimer = setTimeout(() => {
-                isArmed = true;
-                if (navigator.vibrate) navigator.vibrate(60); 
-            }, 1000);
+            if (!isArmed) {
+                holdTimer = setTimeout(() => {
+                    isArmed = true;
+                    if (navigator.vibrate) navigator.vibrate([40, 30, 40]); 
+                }, 1000);
+            }
         });
 
         window.addEventListener('touchmove', (e) => {
-            clearTimeout(holdTimer); // Movement cancels arming
+            clearTimeout(holdTimer); 
             const clientY = e.touches[0].clientY;
             const delta = clientY - lastTouchY;
             lastTouchY = clientY;
@@ -98,10 +113,9 @@
             isDragging = false;
             clearTimeout(holdTimer);
 
-            // THE TRIGGER: 
-            // If you armed it previously, the very next release triggers the force.
-            if (isArmed && Math.abs(velocity) > 2) {
-                isArmed = false; // Reset trick
+            // If armed and they flicked (velocity check), execute the force
+            if (isArmed && Math.abs(velocity) > 1.5) {
+                isArmed = false; 
                 cancelAnimationFrame(animationFrame);
                 forceToTarget();
             }
@@ -109,16 +123,20 @@
 
         function forceToTarget() {
             const target = document.getElementById('secret-target');
+            // Centering math
             const targetY = -(target.offsetTop - (window.innerHeight / 2) + 100);
             const startY = currentY;
             const distance = targetY - startY;
-            const duration = 1200; 
+            
+            const duration = 1500; // Slightly longer for a more "magical" glide
             const startTime = performance.now();
 
             function animate(time) {
                 const elapsed = time - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                const ease = 1 - Math.pow(1 - progress, 5); // Smooth decelerate
+                
+                // Quintic Out Easing: Super fast start, very long smooth finish
+                const ease = 1 - Math.pow(1 - progress, 5); 
                 
                 currentY = startY + (distance * ease);
                 render();
